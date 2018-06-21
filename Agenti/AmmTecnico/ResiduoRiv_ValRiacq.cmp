@@ -1,0 +1,175 @@
+'---------------------------------------------------------------------------------------------------------------------------------------
+'Elenco variabili lette da Metodo
+'    ValoreAmm              Variabile di ritorno con il valore Amm. Div. Naz. calcolato
+'    ValoreAmmEuro          Variabile di ritorno con il valore Amm. Euro  calcolato
+'    ResiduoAmm             Variabile di ritorno con il Residuo Amm. Div. Naz. calcolato
+'    ResiduoAmmEuro         Variabile di ritorno con il Residuo Amm. Euro  calcolato
+'Elenco oggetti/variabili passate da Metodo
+'Oggetti
+'    MXNU		    istanza dell'oggetto Nucleo
+'    MXDB                   istanza dell'oggetto Database
+'    hndDBArchivi           connessione al database 
+'Variabili    
+'    TipoCal                Tipo Ammortamento
+'		            1=Civilistico
+'		            2=Industriale
+'		            3=Altro
+'    Tipo                   Tipo di calcolo
+'                           A Ammortamento 
+'                           S Simulazione   
+'    Cespite                Codice del cespite 
+'    DaData                 Data inizio Calcolo Amm.
+'    AData                  Data fine Calcolo Amm.
+'    PercAmpl               Percentuale amplificazione amm.
+'             VALORI LETTI DAI MOVIMENTI 
+'    TotImporti(,)          Array di dimensione 8,1 contenente rispettivamente 
+'			    0=VALOREACQUISTO	    0=DIVNAZ
+'			    1=COSTIAGGIUNTIVI       1=EURO
+'			    2=INTEGRAZIONI
+'			    3=RIVALUTAZIONI
+'			    4=ELIMINAZIONI
+'			    5=DISTRUZIONI
+'			    6=VENDITA
+'			    7=RIVVALORE
+'			    8=VENDITAVALORE
+'    QuantitaResidua        Quantità Residua del Cespite
+'    QuantitaEliminata      Quantità Eliminata del Cespite
+'              VALORI LETTI DALL'ANAGRAFICA CESPITI
+'    DataEntrata            Data Entrata in funzione
+'    DataTermine            Data Termine utilizzo
+'    UM_Ass                 UM assorbimento
+'    ValoreRiacquisto       Valore di riacquisto
+'    ValoreRiacquistoEuro   Valore di riacquisto Euro
+'    PercAmm_Tipo1          Perc. Amm. Tipo 1       - Calcolo in %
+'    PercAmm_Tipo2          Perc. Amm. Tipo 2      
+'    PercAmm_Tipo3          Perc. Amm. Tipo 3      
+'    Durata_Tipo1           Durata Amm. Tipo 1      - Calcolo per Periodo
+'    Durata_Tipo2           Durata Amm. Tipo 2     
+'    Durata_Tipo3           Durata Amm. Tipo 3     
+'    QtaTot_Tipo1           Quantità Totale Tipo 1  - Calcolo per Quantità
+'    UM_Tipo1               UM Tipo 1
+'    QtaMis_Tipo1           Quantità Misurata Tipo 1
+'    QtaTot_Tipo2           Quantità Totale Tipo 2
+'    UM_Tipo2               UM Tipo 2  
+'    QtaMis_Tipo2           Quantità Misurata Tipo 1
+'    QtaTot_Tipo3           Quantità Totale Tipo 3
+'    UM_Tipo3               UM Tipo 3 
+'    QtaMis_Tipo3           Quantità Misurata Tipo 1
+'---------------------------------------------------------------------------------------------------------------------------------------
+
+Const VALOREACQUISTO = 0
+Const COSTIAGGIUNTIVI = 1
+Const INTEGRAZIONI = 2
+Const RIVALUTAZIONI = 3
+Const ELIMINAZIONI = 4
+Const DISTRUZIONI = 5
+Const VENDITA = 6
+Const RIVVALORE = 7
+Const VENDITAVALORE = 8
+
+Const DIVNAZ = 0
+Const EURO = 1
+
+Dim ValoreImmobilizzo, ValoreImmobilizzoEuro, Esegui, DataInizioAmm, DataFineAmm, hSS, strSQL, PercRiv
+Dim ResiduoAmm, ResiduoAmmEuro, nrGiorniAnno
+
+If (Day(DateSerial(Year(AData), 2, 29)) = 29) then
+   nrGiorniAnno = 366
+Else
+   nrGiorniAnno = 365
+End If
+
+ValoreAmm = 0
+ValoreAmmEuro = 0
+
+If IsDate(DataEntrata) Then
+   Esegui = (cDate(DataEntrata) <= cDate(AData))
+   If cDate(DataEntrata) > cDate(DaData) Then
+      DataInizioAmm = DataEntrata
+   Else
+      DataInizioAmm = DaData	
+   End If
+Else
+   Esegui = 0
+End If
+
+If Esegui Then
+   If IsDate(DataTermine) Then
+      Esegui = (cDate(DataTermine) > cDate(DataInizioAmm))
+      If cDate(DataTermine) > cDate(AData) Then
+         DataFineAmm = AData
+      Else
+         DataFineAmm = DataTermine
+      End If
+   Else
+      Esegui = -1
+      DataFineAmm = AData
+   End If
+End If
+
+If Esegui Then
+   ValoreImmobilizzo = TotImporti(VALOREACQUISTO,DIVNAZ) + TotImporti(COSTIAGGIUNTIVI,DIVNAZ) + TotImporti(INTEGRAZIONI,DIVNAZ) 
+   ValoreImmobilizzo = ValoreImmobilizzo + TotImporti(RIVALUTAZIONI,DIVNAZ) - TotImporti(ELIMINAZIONI,DIVNAZ) 
+   ValoreImmobilizzo = ValoreImmobilizzo - TotImporti(DISTRUZIONI,DIVNAZ) - TotImporti(VENDITA,DIVNAZ) 
+   ValoreImmobilizzo = ValoreImmobilizzo + TotImporti(RIVVALORE,DIVNAZ) - TotImporti(VENDITAVALORE,DIVNAZ)
+
+   If ValoreRiacquisto > 0 Then 
+      ValoreImmobilizzo = ValoreRiacquisto
+   End If    
+                       
+   ValoreImmobilizzoEuro = TotImporti(VALOREACQUISTO,EURO) + TotImporti(COSTIAGGIUNTIVI,EURO) + TotImporti(INTEGRAZIONI,EURO) 
+   ValoreImmobilizzoEuro = ValoreImmobilizzoEuro + TotImporti(RIVALUTAZIONI,EURO) - TotImporti(ELIMINAZIONI,EURO) 
+   ValoreImmobilizzoEuro = ValoreImmobilizzoEuro - TotImporti(DISTRUZIONI,EURO) - TotImporti(VENDITA,EURO) 
+   ValoreImmobilizzoEuro = ValoreImmobilizzoEuro + TotImporti(RIVVALORE,EURO) - TotImporti(VENDITAVALORE,EURO)
+  
+ If ValoreRiacquistoEuro > 0 Then 
+      ValoreImmobilizzoEuro = ValoreRiacquistoEuro
+   End If    
+
+   Select Case TipoCalc
+      Case 1   'Civilistico
+          ValoreAmm = ValoreImmobilizzo * PercAmm_Tipo1 / 100
+          ValoreAmmEuro = ValoreImmobilizzoEuro * PercAmm_Tipo1 / 100
+      Case 2   'Industriale
+          ValoreAmm = ValoreImmobilizzo * PercAmm_Tipo2 / 100
+          ValoreAmmEuro = ValoreImmobilizzoEuro * PercAmm_Tipo2 / 100
+      Case 3   'Altro
+          ValoreAmm = ValoreImmobilizzo * PercAmm_Tipo3 / 100
+          ValoreAmmEuro = ValoreImmobilizzoEuro * PercAmm_Tipo3 / 100
+   End Select
+   ValoreAmm = (ValoreAmm * PercAmpl / 100) / nrGiorniAnno * (DateDiff("d", DataInizioAmm, DataFineAmm)+1)
+   ValoreAmmEuro = (ValoreAmmEuro * PercAmpl / 100) / nrGiorniAnno * (DateDiff("d", DataInizioAmm, DataFineAmm)+1)
+
+   'Gestione delle percentuali di rivalutazione per anno
+   strSQL = "SELECT Percentuale FROM TABPERCRIV_ATI WHERE Esercizio=" & Year(AData)
+   SET hSS = MXDB.DBCreaSS(hndDBArchivi, strSQL, 1)
+   If Not MXDB.DBFineTab((hSS),4) Then
+       PercRiv = MXDB.DBGetCampo((hSS),4,"Percentuale",0)  
+       ValoreAmm = ValoreAmm + ValoreAmm * CDbl(PercRiv) / 100
+       ValoreAmmEuro = ValoreAmmEuro + ValoreAmmEuro * CDbl(PercRiv) / 100
+   End If
+   Call MXDB.DBChiudiSS((hSS))
+
+   'Calcolo del Residuo
+   strSQL = "SELECT Sum(ImportoAmm) TotAmm, Sum(ImportoAmmEuro) TotAmmEuro FROM MovimentiCes_ATI WHERE Cespite='" & Cespite & "' AND TipoCalc=" & TipoCalc & " AND Tipo='A' AND DataFineAmm < " & hnddbarchivi.FormatoSql(DaData,7)
+   SET hSS = MXDB.DBCreaSS(hndDBArchivi, strSQL, 1)
+   ResiduoAmm = ValoreImmobilizzo - CDbl(MXDB.DBGetCampo((hSS),4,"TotAmm",0))
+   ResiduoAmmEuro = ValoreImmobilizzoEuro - CDbl(MXDB.DBGetCampo((hSS),4,"TotAmmEuro",0))
+   Call MXDB.DBChiudiSS((hSS))
+
+   If ResiduoAmm < 0 Then ResiduoAmm = 0
+   If ResiduoAmmEuro < 0 Then ResiduoAmmEuro = 0
+	
+   'Gestione del residuo
+   If ValoreAmm > ResiduoAmm Then	
+      ValoreAmm = ResiduoAmm
+   End If
+
+   If ValoreAmmEuro > ResiduoAmmEuro Then	
+      ValoreAmmEuro = ResiduoAmmEuro
+   End If
+  
+End If
+
+
+

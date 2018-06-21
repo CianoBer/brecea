@@ -1,0 +1,26 @@
+// ---------------------------------------------------------------------------- //
+// Svuotamento ubicazioni su movimenti di produzione generati da consolidamento //
+// liste di movimentazione (scatta dopo la generazione del movimento, ma prima  //
+// della movimentazione effettiva di magazzino)                                 //
+// ---------------------------------------------------------------------------- //
+
+
+
+[VALUTA]
+
+// Recupero l'ID testa movimento produzione generato
+
+#LET V_IDTesta={$(PARAMETRO:0)}
+
+// Apertura connessione database
+
+#DBCONNETTI #0
+
+// Esecuzione query di cancellazione
+
+#DBESEGUISQL #0;UPDATE StoricoMovOrdProd SET Ubicazione='', UbicazioneColl='', UbicazioneScarto='', UbicazioneScartoColl='' WHERE RifProgressivo={$(V_IDTesta)}
+#DBESEGUISQL #0;UPDATE StoricoMovImpProd SET Ubicazione='', UbicazioneColl='', UbicazioneScarto='', UbicazioneScartoColl='' WHERE RifProgressivo={$(V_IDTesta)}
+
+// Chiusura connessione database
+
+#DBDISCONNETTI #0

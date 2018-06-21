@@ -1,0 +1,42 @@
+// --------------------------------------------------------------------------------------- //
+// Azzeramento imponibile e percentuale provvigioni su righe a valore con importo negativo //
+// --------------------------------------------------------------------------------------- //
+
+
+
+[VALUTA]
+
+#MODESCLUSIVA
+
+// Si esegue solo nel documento principale (non prelevato) e se sono presenti righe
+#IF {$(PARAMETRO:3)}=0 & {$(PARAMETRO:2)}>0
+	#SCRIPT VBScript
+
+        Dim objDoc, I
+
+        Set objDoc = MXOBJS.GetOggetto("DOCUMENTO")
+
+        ' Ciclo verifica righe
+        If CLng(objDoc.NumeroRighe) > 0 Then
+            For I = 1 To CLng(objDoc.NumeroRighe)
+
+                ' Se riga a valore con totale netto riga negativo,
+                ' azzeramento imponibile provvigioni e svuotamento percentuali provvigioni
+                If objDoc.RigaAttiva.ValoreCampo(1, I) = "V" And CDbl(objDoc.RigaAttiva.ValoreCampo(22, I)) < 0 Then
+                    objDoc.RigaAttiva.ValoreCampo(193, I) = 0
+                    objDoc.RigaAttiva.ValoreCampo(194, I) = 0
+                    objDoc.RigaAttiva.ValoreCampo(25, I) = ""
+                    objDoc.RigaAttiva.ValoreCampo(27, I) = ""
+                    objDoc.RigaAttiva.ValoreCampo(45, I) = ""
+                End If
+            Next
+        End If
+
+        Set objDoc = Nothing
+
+	#ENDSCRIPT
+#ENDIF
+
+#LET PARAMETRO=1
+
+#FINEMODESCLUSIVA

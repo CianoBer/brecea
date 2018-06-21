@@ -1,0 +1,54 @@
+// =============================================================================
+// Cliente:	Brevetti CEA
+// Agente:	SelezionaPercorsoSuForm
+// Azione:	indivina un pò cosa fa...
+// Data:	.
+// Build:	.
+// S-dev.:	Ciano
+// =============================================================================
+
+[CONTROLLI]
+#SSFILTRO
+
+[SSFILTRO_CLICK]
+
+#if $(colonnaattiva)=5 & $(rigaattiva)=16
+
+	#script vbscript
+	
+		private sub ImpostaVariabile(nome, valore)
+			on error resume next
+			AGTVAR.Remove nome
+			AGTVARNOME.Remove nome
+			on error goto 0
+			AGTVAR.Add valore, nome
+			AGTVARNOME.Add nome, nome
+		end sub
+		
+		Set objValid = createobject("mxkit.controllicampo")
+		Dim objValid 
+		With objValid
+			Call objValid.Inizializza("VALID_FOLDER")
+			.ListaCampiRit = "FilePath"
+			set colInput = VBCOLLECTION
+			colInput.Add objValid, "ObjValid"
+			colInput.Add "FilePath", "NomeGruppo"
+			If .Selezione("", (colInput)) Then
+				strFilePath = .ValoriCampiRit("FilePath")
+			End If
+			Set colInput = Nothing
+		End With
+	
+		Set objValid = Nothing
+		ImpostaVariabile "PathFile",strFilePath
+	
+	#endscript
+
+	#if $(PathFile)==
+	#else
+		#frmscrivicella #ssfiltro;4;16;$(PathFile)
+	#endif
+
+#endif
+
+

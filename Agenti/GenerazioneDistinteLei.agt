@@ -1,0 +1,28 @@
+//=============================================================================
+// Cliente:	.
+// Agente:	.
+// Azione:	.
+// Data:	.
+// Build:	.
+// S-dev.:	Ciano
+// =============================================================================
+
+[VALUTA]
+
+#MESSAGGIO 292;Lancio la procedura di generazione Distinte?;Importazione Distinte PDM-LEI
+
+#IF	$(RISPOSTAMESSAGGIO)=6
+	
+	#dbconnetti #0
+	
+	#DBESEGUISQL #0;EXEC dbo.BreCea_Lei_GeneraDBA
+	
+	#dbdisconnetti #0
+	
+	#messaggio 0;Procedura Terminata;Importazione Distinte PDM-LEI
+
+#ELSE
+
+	#messaggio 48;Nessuna modifica apportata al sistema;Annullamento Procedura Distinte PDM-LEI
+
+#ENDIF

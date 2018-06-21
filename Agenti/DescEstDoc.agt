@@ -1,0 +1,44 @@
+// -------------------------------------------------------------------------- //
+// Agente di apertura form per gestione Descrizione Estesa su righe documenti //
+// -------------------------------------------------------------------------- //
+
+
+
+[VALUTA]
+
+#SCRIPT VBScript
+
+    Dim frmDoc, vntParam, objDoc, objNote, intRiga, strScrivi
+
+    ' Recupero oggetto documenti
+    Set frmDoc = MXNU.FrmMetodo.FormAttiva
+    If Not frmDoc Is Nothing And frmDoc.HelpContextID = 4000 Then
+        Set vntParam = VBCollection
+        Call frmDoc.AzioniMetodo(13, vntParam)
+        If Not vntParam Is Nothing Then
+            Set objDoc = vntParam(6)
+
+            ' Apertura form note
+            Set objNote = CreateObject("ExtMetodo.cNoteEstese")
+            If objNote Is Nothing Then
+                MsgBox "Impossibile instanziare l'oggetto NoteEstese!", 16, "ATTENZIONE!"
+            Else
+                intRiga = AGTVAR.Item("RIGAATTIVA")
+                objNote.Note = objDoc.RigaAttiva.ValoreCampo(-5, intRiga)
+
+                strScrivi = objNote.MostraNoteEstese()
+
+                ' Se premuto il pulsante di salvataggio, riporta la nuova descrizione estesa
+                If strScrivi = "SI" Then
+                    objDoc.RigaAttiva.ValoreCampo(-5, intRiga) = Left(Trim(objNote.Note), 3000)
+                End If
+            End If
+        End If
+    End If
+
+    Set objNote = Nothing
+    Set objDoc = Nothing
+    Set vntParam = Nothing
+    Set frmDoc = Nothing
+
+#ENDSCRIPT

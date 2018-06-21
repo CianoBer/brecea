@@ -1,0 +1,51 @@
+// --------------------------------------------------------------------------- //
+// Valorizzazione campo data consegna in base alle date richiesta e confermata //
+// --------------------------------------------------------------------------- //
+
+
+
+[VALUTA]
+
+#MODESCLUSIVA
+
+#LET V_Riga={$(RIGAATTIVA)}
+
+#SCRIPT VBScript
+
+    Dim frmDoc, vetParam, objDoc, lngColData, lngRiga
+
+    ' Recupero oggetto documenti
+    Set frmDoc = MXNU.FrmMetodo.FormAttiva
+    If Not frmDoc Is Nothing And frmDoc.HelpContextID = 4000 Then
+        Set vetParam = VBCollection
+        Call frmDoc.AzioniMetodo(13, vetParam)
+        If Not vetParam Is Nothing Then
+            Set objDoc = vetParam(6)
+
+            ' Recupero riga attiva
+            lngRiga = CLng(AGTVAR.Item("V_Riga"))
+
+            ' Imposta la data di consegna
+            If CLng(objDoc.RigaAttiva.ValoreCampo(-2, lngRiga)) <> 1 Or objDoc.RigaAttiva.ValoreCampo(-3, lngRiga) = "31/12/1899" Or Trim(objDoc.RigaAttiva.ValoreCampo(-3, lngRiga)) = "" Then
+                If objDoc.RigaAttiva.ValoreCampo(-1, lngRiga) = "31/12/1899" Or Trim(objDoc.RigaAttiva.ValoreCampo(-1, lngRiga)) = "" Then
+                    If lngRiga = 1 Then
+                        objDoc.RigaAttiva.ValoreCampo(6, lngRiga) = objDoc.xTDoc.GrInput("DATADOC").ValoreCorrente
+                    Else
+                        objDoc.RigaAttiva.ValoreCampo(6, lngRiga) = objDoc.RigaAttiva.ValoreCampo(6, lngRiga - 1)
+                    End If
+                Else
+                    objDoc.RigaAttiva.ValoreCampo(6, lngRiga) = objDoc.RigaAttiva.ValoreCampo(-1, lngRiga)
+                End If
+            Else
+                objDoc.RigaAttiva.ValoreCampo(6, lngRiga) = objDoc.RigaAttiva.ValoreCampo(-3, lngRiga)
+            End If
+        End If
+    End If
+
+    Set objDoc = Nothing
+    Set vetParam = Nothing
+    Set frmDoc = Nothing
+
+#ENDSCRIPT
+
+#FINEMODESCLUSIVA

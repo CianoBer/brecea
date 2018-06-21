@@ -1,0 +1,279 @@
+﻿<?xml version="1.0"?>
+<doc>
+<assembly>
+<name>
+Rilevazionedatifabbrica
+</name>
+</assembly>
+<members>
+<member name="P:My.Resources.GlobalResources.ResourceManager">
+	<summary>
+  Restituisce l'istanza di ResourceManager nella cache utilizzata da questa classe.
+</summary>
+</member><member name="P:My.Resources.GlobalResources.Culture">
+	<summary>
+  Esegue l'override della proprietà CurrentUICulture del thread corrente per tutte le
+  ricerche di risorse eseguite utilizzando questa classe di risorse fortemente tipizzata.
+</summary>
+</member><member name="P:My.Resources.GlobalResources.APPLICATION_TITLE">
+	<summary>
+  Cerca una stringa localizzata simile a Rilevazione dati fabbrica.
+</summary>
+</member><member name="T:My.Resources.GlobalResources">
+	<summary>
+  Classe di risorse fortemente tipizzata per la ricerca di stringhe localizzate e così via.
+</summary>
+</member><member name="M:Helpers.CheckHardwareKey">
+	<summary>
+ Check the existence of the hardware key and the presence of the module 151 (5CW-PP)
+ </summary>
+	<returns>True if the module exists, false otherwise</returns>
+</member><member name="M:Helpers.CopyFormPosition(System.Windows.Forms.Form,System.Windows.Forms.Form)">
+	<summary>
+ Copy the position of the source form to the destination one
+ </summary>
+	<param name="source">The source form</param>
+	<param name="destination">The destination form</param>
+</member><member name="M:Helpers.KeyCodeToAscii(System.Int32,System.Int32)">
+	<summary>
+ Converts a KeyCode in its string representation
+ </summary>
+	<param name="keyCode">The key code</param>
+	<param name="modifiers">The modifiers applied</param>
+	<returns>The string representation of the key</returns>
+</member><member name="M:Helpers.SafeConvertFieldValue``1(System.Object,``0)">
+	<summary>
+ Convert a field value of any type in the specified type. If the value is Nothing or
+ DBNull returns the default value specified
+ </summary>
+	<typeparam name="T">The type to convert to</typeparam>
+	<param name="o">The object to convert</param>
+	<param name="d">The default value</param>
+	<returns>The converted value or the default value if the convertion was not possible
+ or the value was Nothing or DBNull</returns>
+</member><member name="M:Helpers.NewProgID(System.Data.SqlClient.SqlConnection,System.String)">
+	<summary>
+ Get a new progressive id number for the table of the database
+ </summary>
+	<param name="cnt">The connection to the SQL Database</param>
+	<param name="tableName">The name of the table</param>
+	<returns>The number of the progressive</returns>
+</member><member name="P:WorkerFormsCache.Forms">
+	<summary>
+ Returns the internal list of forms in the cache
+ </summary>
+	<returns>The WorkerForm objects list</returns>
+</member><member name="M:WorkerFormsCache.ContainsForm``1">
+	<summary>
+ Check if a form of the specified type exists in the cache
+ </summary>
+	<typeparam name="T">The type of the form to look for</typeparam>
+	<returns>True if the form was found, false otherwise</returns>
+</member><member name="M:WorkerFormsCache.AddForm``1(``0)">
+	<summary>
+ Add an form of the specified type to the cache
+ </summary>
+	<typeparam name="T">The type of the form that should inherit the base class
+ WorkerForm</typeparam>
+	<param name="f">The form to add</param>
+</member><member name="M:WorkerFormsCache.RemoveForm``1">
+	<summary>
+ Remove the form of the specified type from the cache
+ </summary>
+	<typeparam name="T">The type of the form to remove</typeparam>
+	<returns>The form removed</returns>
+</member><member name="M:WorkerFormsCache.GetForm``1">
+	<summary>
+ Get the form of the specified type
+ </summary>
+	<typeparam name="T">The type of the form to look for</typeparam>
+	<returns>The form found</returns>
+</member><member name="M:WorkerFormsCache.ClearCache(System.Boolean)">
+	<summary>
+ Empty the cache, eventually disposing the forms contained
+ </summary>
+	<param name="disposeForms">True to dispose the forms, false otherwise</param>
+</member><member name="M:WorkerFormsCache.ShowForm``1">
+	<summary>
+ Run the method WorkerForm.ShowForm of the form in the cache of the specified type
+ </summary>
+	<typeparam name="T">The type of form to look for</typeparam>
+	<returns>The form found</returns>
+</member><member name="M:WorkerFormsCache.HideForm``1">
+	<summary>
+ Run the method WorkerForm.HideForm of the form in the cache of the specified type
+ </summary>
+	<typeparam name="T">The type of form to look for</typeparam>
+	<returns>The form found</returns>
+</member><member name="T:WorkerFormsCache">
+	<summary>
+ A cache of objects that inherit the WorkerForm base class
+ </summary>
+</member><member name="P:GenericCache.CurrentOperator">
+	<summary>
+ Get or set the current operator
+ </summary>
+	<value>The current operator or nothing if there's no current operator</value>
+</member><member name="P:GenericCache.CurrentHotKeyManager">
+	<summary>
+ Get or set the current HotKeyManager
+ </summary>
+	<value>The current HotKeyManager or nothing if there's no one</value>
+</member><member name="P:GenericCache.Item(System.String)">
+	<summary>
+ Get the object in the cache with the specified name
+ </summary>
+	<param name="name">The name of the object in the cache</param>
+	<returns>The object found or nothing if the object was not found</returns>
+</member><member name="M:GenericCache.Remove(System.String)">
+	<summary>
+ Remove the object with the specified name from the cache
+ </summary>
+	<param name="name">The name of the object to remove</param>
+	<returns>The object just removed</returns>
+</member><member name="M:GenericCache.ContainsKey(System.String)">
+	<summary>
+ Check if an object with the specified name is stored in the cache
+ </summary>
+	<param name="name">The name of the object</param>
+	<returns>True if the object is found, false otherwise</returns>
+</member><member name="T:GenericCache">
+	<summary>
+ This class contains the shared object needed by the applicaltion. Some objects have a
+ special property that allows to access them directly
+ </summary>
+</member><member name="M:Settings.LoadSettingsFromFile(System.String)">
+	<summary>
+ Load all the settings from the specified XML file
+ </summary>
+	<param name="filePath">The file path of the settings file</param>
+	<returns>True if the operation is completed succesfully, false otherwise</returns>
+</member><member name="P:Settings.ConnectionString">
+	<summary>
+ The connection string for the database
+ </summary>
+</member><member name="P:Settings.ParametersGroupName">
+	<summary>
+ The name of the group of parameters to be used
+ </summary>
+</member><member name="P:Settings.ActivateShortcut">
+	<summary>
+ The shortcut to be used to activate the application
+ </summary>
+</member><member name="T:Settings">
+	<summary>
+ This class keeps the client-dipendent settings for the entire application
+ </summary>
+</member><member name="M:Parameters.LoadParameters(System.String)">
+	<summary>
+ Load the parameters from the database
+ </summary>
+	<param name="connectionString">The connection string to the database</param>
+	<returns>True if the operation was completed succesfully, false otherwise</returns>
+</member><member name="M:Parameters.FindParameter(System.String,System.String)">
+	<summary>
+ Look for a specific parameter
+ </summary>
+	<param name="groupName">The name of the group of parameters</param>
+	<param name="parameterName">The name of the parameter to look for</param>
+	<returns>The parameter found or nothing if the parameter doesn't exist</returns>
+</member><member name="M:Parameters.GetINTParameterValue(System.String,System.String,System.Int32)">
+	<summary>
+ Get the value of an Integer parameter or a default value if the parameter is not found
+ </summary>
+	<param name="groupName">The name of the group of parameters</param>
+	<param name="parameterName">The name of the parameter</param>
+	<param name="default">The default value</param>
+	<returns>The value of the parameter or the defaul value</returns>
+</member><member name="M:Parameters.GetSTRINGParameterValue(System.String,System.String,System.String)">
+	<summary>
+ Get the value of an String parameter or a default value if the parameter is not found
+ </summary>
+	<param name="groupName">The name of the group of parameters</param>
+	<param name="parameterName">The name of the parameter</param>
+	<param name="default">The default value</param>
+	<returns>The value of the parameter or the defaul value</returns>
+</member><member name="M:Parameters.GetDATETIMEParameterValue(System.String,System.String,System.DateTime)">
+	<summary>
+ Get the value of an DateTime parameter or a default value if the parameter is not found
+ </summary>
+	<param name="groupName">The name of the group of parameters</param>
+	<param name="parameterName">The name of the parameter</param>
+	<param name="default">The default value</param>
+	<returns>The value of the parameter or the defaul value</returns>
+</member><member name="P:Parameters.ParametersCount(System.String)">
+	<summary>
+ Get the number of parameters of a specified group
+ </summary>
+	<param name="groupName">The name of the group of parameters</param>
+	<returns>The number of parameters stored</returns>
+</member><member name="T:Parameters">
+	<summary>
+ This class is used to store the parameters of the application that are stored in the
+ database
+ </summary>
+</member><member name="M:Operator.ValidateOperator(System.String)">
+	<summary>
+ Validate the operator using the badge string. If an operator with that badge is found
+ returns an Operator object, otherwise returns Nothing
+ </summary>
+	<param name="operatorBadge">The badge code of the operator</param>
+	<returns>The Operator object for the badge code or Nothing</returns>
+</member><member name="T:Operator">
+	<summary>
+ This class keeps the informations about an operator
+ </summary>
+</member><member name="M:HotKeyManager.RegisterKey(System.String,HotKeyManager.HotKeyPress)">
+	<summary>
+ Register a shortcut and associate it to a function
+ </summary>
+	<param name="key">The shortcut, in string format</param>
+	<param name="d">A delegate object that represents the function to call</param>
+</member><member name="M:HotKeyManager.OnHotKeyPress(System.Int32)">
+	<summary>
+ Run the function associated with the specific id
+ </summary>
+	<param name="id">The id of the operation to execute that is passed by Windows</param>
+</member><member name="M:HotKeyManager.UnregisterAll">
+	<summary>
+ Unregister all the shortcuts that were registered
+ </summary>
+</member><member name="M:HotKeyManager.ParseKey(System.String)">
+	<summary>
+ Parse the shortcut in string format and return the value to use with the
+ Windows APIs
+ </summary>
+	<param name="key">The shortcut in string format</param>
+	<returns>The value of the shortcut</returns>
+</member><member name="T:HotKeyManager">
+	<summary>
+ This class allows to register one or more shortcut and bind them to specific functions
+ </summary>
+</member><member name="P:My.Resources.Resources.ResourceManager">
+	<summary>
+  Restituisce l'istanza di ResourceManager nella cache utilizzata da questa classe.
+</summary>
+</member><member name="P:My.Resources.Resources.Culture">
+	<summary>
+  Esegue l'override della proprietà CurrentUICulture del thread corrente per tutte le
+  ricerche di risorse eseguite utilizzando questa classe di risorse fortemente tipizzata.
+</summary>
+</member><member name="T:My.Resources.Resources">
+	<summary>
+  Classe di risorse fortemente tipizzata per la ricerca di stringhe localizzate e così via.
+</summary>
+</member><member name="T:IWorkerForm">
+	<summary>
+ This interface is supposed to be implemented by every form of the application and is
+ necessary if the object have to be inserted in the form cache
+ </summary>
+</member><member name="T:WorkerForm">
+	<summary>
+ This class is the base class for every form that is to be used in the application
+ </summary>
+	<remarks>This class is not declared MustInherit because VS can't show at design time
+ a form that inherits from and object declared MustInherit. This class is used just
+ for debug purposes</remarks>
+</member>
+</members>
+</doc>

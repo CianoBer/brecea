@@ -1,0 +1,33 @@
+// ------------------------------------------ //
+// Blocco linguetta Implodi se articolo vuoto //
+// Correzione temporanea anomalia 9948        //
+// ------------------------------------------ //
+
+
+
+[CONTROLLI]
+
+#Form
+#txtb_0
+
+
+
+[FORM_LOAD]
+
+// Blocca linguetta Implodi al caricamento della form
+#FRMCONTROLLO #Ling_1;4
+
+
+
+[TXTB_0_LOSTFOCUS]
+
+// Verifica se è stato indicato un articolo un articolo
+#FRMLEGGICAMPOSTR #txtb_0;V_Art
+#TRIM V_Art;V_Art;T
+
+// Blocca linguetta Implodi se articolo non presente
+#IF $(V_Art)==
+	#FRMCONTROLLO #Ling_1;4
+#ELSE
+	#FRMCONTROLLO #Ling_1;5
+#ENDIF

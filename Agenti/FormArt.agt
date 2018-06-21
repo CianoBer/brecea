@@ -1,0 +1,71 @@
+// ------------------------------------------------ //
+// Blocco celle Utente e Data Creazione negli extra //
+// ------------------------------------------------ //
+[CONTROLLI]
+#Form
+#SSUBICAZIONI
+
+[FORM_LOAD]
+// Blocco celle Utente e Data Creazione
+#FRMGRIGLIA #SSExtra;2;3;-1
+#FRMGRIGLIA #SSExtra;2;4;-1
+
+
+[SSUBICAZIONI_CLICK]
+#MODESCLUSIVA
+	#IF {$(COLONNAATTIVA)}=10
+		#FRMLEGGICAMPOSTR #TXTB_0;CODART
+		#FRMLEGGICELLA #SSUBICAZIONI;2;$(RIGAATTIVA);CODDEPOSITO
+		#FRMLEGGICELLA #SSUBICAZIONI;4;$(RIGAATTIVA);CODUBICAZIONE
+		
+		//per prove in metodo
+		//#LETS DEVICESTAMPA = RICOH Aficio SP 5200DN PCL 6
+		
+		//dal cliente
+		#LETS DEVICESTAMPA = \\dcw2k802\PRT46
+		
+			#SCRIPT VBSCRIPT					
+
+				'per prove in metodo
+				'modulostampa = "D:\METODOEVOLUSSERVER\PERS\BRECEA\STAMPE\LASER\ETICMAG90.rpt"
+				
+				'dal cliente
+				modulostampa = "M:\MetodoEmbyonServer\pers\BRECEA\STAMPE\LASER\ETICMAG90.rpt"
+
+				Esercizio = AGTVAR.Item("ANNOATTIVO")
+				Articolo = AGTVAR.Item("CODART")
+				Magazzino = AGTVAR.Item("CODDEPOSITO")
+				Ubicazione = AGTVAR.Item("CODUBICAZIONE")
+
+				Dim objFT 'As MXKit.CFiltro
+				Dim MobjCRW 'As MXKit.CCrw
+				Dim filesys
+
+				set filesys = CreateObject("Scripting.FileSystemObject") 
+
+				set MXFT = MXAA.GetAmbiente("MXFT")
+				Set objFT = MXFT.CreaCFiltro()
+				Call objFT.InizializzaFiltro
+
+				objFT.SettaSQLFiltro " MET_VISTA_ARTICOLIUBIC.ESERCIZIO = " & Esercizio & " AND CODICE = '" & Articolo & "' AND CODDEPOSITO = '" & Magazzino & "' AND CODUBICAZIONE = '" & Ubicazione & "'"
+
+				set MXCREP = MXAA.GetAmbiente("MXCREP")
+				Set MobjCRW = MXCREP.CreaCCrw()
+
+				MobjCRW.ClearOpzioniStp
+				MobjCRW.Stampante.nCopie = 1
+				MobjCRW.Filerpt = modulostampa
+				MobjCRW.Periferica = "Stampante"
+
+				Call MobjCRW.Stampante.LeggiVBPrinter(AGTVAR.Item("DEVICESTAMPA"))
+				q = MobjCRW.Stampa((objFT), Nothing, False)
+
+				Set MobjCRW = Nothing
+				Set objFT = Nothing
+				Set MXFT = Nothing
+				Set MXCREP = Nothing
+
+		#ENDSCRIPT					
+	#ENDIF
+#FINEMODESCLUSIVA
+

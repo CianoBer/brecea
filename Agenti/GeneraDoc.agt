@@ -1,0 +1,169 @@
+// =============================================================================
+// Cliente:	Brevetti CEA
+// Agente:	GeneraDoc
+// Azione:	generazione Documenti da AS400
+// =============================================================================
+
+[VALUTA]
+// verifica se esistono codici articolo nei documenti da generare non presenti in anagrafica
+#SCRIPT VBSCRIPT
+	'Scrivo i dati del documenti in un file di log
+	strLogFileName="C:\LOG.TXT"
+	Const ForAppending = 8
+	Set fs = CreateObject("Scripting.FileSystemObject")
+	If fs.FileExists(strLogFileName) Then
+		set file = fs.OpenTextFile(strLogFileName, ForAppending) 
+	Else
+		Set file = fs.CreateTextFile(strLogFileName)
+	End If
+	
+	gstrMXPSQLSERVER="SRVERP01"
+	gstrMXPDITTAATTIVA="BRECEA"
+
+	Set DbConn = CreateObject("ADODB.Connection")
+	DbConn.Open "Provider=sqloledb;Data Source=" & gstrMXPSQLSERVER & ";Initial Catalog=" & gstrMXPDITTAATTIVA & ";User Id=trm151;Password=terminale;"
+
+	Set rsPrev = DbConn.Execute("SELECT * FROM MET_VISTATESTEDOCDACREARE WHERE IMPORTATO=0 AND NOT (CODCONTO) IS NULL ORDER BY ESERCIZIO,DATADOC")
+	'Set rsPrev = DbConn.Execute("SELECT * FROM MET_VISTATESTEDOCDACREARE WHERE coddoc in ('OR12080731','OG12070193','OG12070163','OR12070634','OG12070201','OR12070648','OG12070177') AND NOT (CODCONTO) IS NULL ORDER BY ESERCIZIO,DATADOC")
+	
+	'strLogFile = MXNU.GetTempFile()
+	Call MXNU.ImpostaErroriSuLog("c:\Errori.txt", True)
+	'msgbox cstr(mxnu.CHMessaggi)
+
+	If rsPrev.EOF Then
+		'Avviso se non ci sono dati nella tabella
+		MsgBox "Nessun documento da importare",48,"Generazione Documenti"
+	Else
+		'Leggo elenco dei documenti da importare
+		Dim NP()
+		Dim EsDoc()
+		Dim TipoD()
+		Dim DtDoc()
+		Dim NrRif()
+		Dim CC()
+		i=0
+		While Not(rsPrev.EOF)   
+			Redim Preserve NP(i)
+			Redim Preserve EsDoc(i)
+			Redim Preserve TipoD(i)
+			Redim Preserve DtDoc(i)
+			Redim Preserve NrRif(i)
+			Redim Preserve CC(i)
+			NP(i) = rsPrev.Fields("CODDOC").Value
+			EsDoc(i) = rsPrev.Fields("ESERCIZIO").Value
+			TipoD(i) = rsPrev.Fields("TIPODOC").Value
+			DtDoc(i) = rsPrev.Fields("DATADOC").Value
+			NrRif(i) = rsPrev.Fields("NRRIFDOC").Value
+			CC(i) = rsPrev.Fields("CODCONTO").Value
+			rsPrev.MoveNext
+			i = i + 1
+		WEnd
+		rsPrev.Close
+		Set rsPrev = Nothing
+
+		For i=LBound(NP) to UBound(NP)
+			'Elaboro il documento corrente per il cliente corrente
+			EDoc = EsDoc(i)
+			Tdoc = TipoD(i)
+			DDoc = DtDoc(i)
+			Nrif = NrRif(i)
+			nPrev = NP(i)
+			CodCliente = CC(i)
+
+			'Genero il documento in Metodo
+			Set rs=DbConn.Execute("SELECT * FROM MET_VISTARIGHEDOCDACREARE WHERE CODDOC='" & nPrev & "' ORDER BY NRRIGA")
+			'inizializzo oggetto gestione documenti
+			'MXGD è già inizializzato
+			Set MXGD = MXAA.GetAmbiente("MXGD")
+
+			'apro nuovo documento con n_prev corrente
+			Set mCGestDoc = MXGD.CreaCGestDoc(Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+			'vado in inserimento di un nuovo documento
+			mCGestDoc.Stato = 0
+			'costruzione testa documento
+			Call mCGestDoc.xTDoc.AssegnaCampo("TIPODOC", Tdoc)
+			Call mCGestDoc.xTDoc.AssegnaCampo("ESERCIZIO", EDoc)
+			Call mCGestDoc.xTDoc.AssegnaCampo("DATADOC", DDoc)
+			Call mCGestDoc.xTDoc.AssegnaCampo("CODCLIFOR", CodCliente)
+			Call mCGestDoc.xTDoc.AssegnaCampo("NUMRIFDOC", Nrif)
+			Call mCGestDoc.xTDoc.AssegnaCampo("DATARIFDOC", DDoc)
+
+			ProgRiga = 0
+			While Not(rs.EOF)
+			
+				'inserisco le righe nel documento corrente
+				ProgRiga = ProgRiga+1
+				mCGestDoc.RigaAttiva.RigaCorr = ProgRiga
+				
+				'Controllo se il codice articolo non è presente, così lo setto a vuoto e imposto la riga come riga descrittiva
+				If trim(rs.Fields("CODART").Value)="" Then
+					mCGestDoc.RigaAttiva.ValoreCampo(1) = "D"
+					mCGestDoc.RigaAttiva.ValoreCampo(4) = rs.Fields("DESCRIZIONEART").Value
+				Else
+					mCGestDoc.RigaAttiva.ValoreCampo(2) = rs.Fields("CODART").Value
+					mCGestDoc.RigaAttiva.ValoreCampo(6) = rs.Fields("DATACONSEGNA")
+					mCGestDoc.RigaAttiva.ValoreCampo(7) = rs.Fields("UM").Value
+					If CDbl(rs.Fields("QTAGEST").Value)=0 Then
+						mCGestDoc.RigaAttiva.ValoreCampo(11) = 1
+					Else
+						mCGestDoc.RigaAttiva.ValoreCampo(11) = CDbl(rs.Fields("QTAGEST").Value)
+					End If
+					mCGestDoc.RigaAttiva.ValoreCampo(17) = CDbl(rs.Fields("PREZZOUNITLORDO").Value)
+					If rs.Fields("SCONTIESTESI").Value<>"" Then
+						If right(REPLACE(rs.Fields("SCONTIESTESI").Value,".",","),2)="00" then
+							mCGestDoc.RigaAttiva.ValoreCampo(20) = left(REPLACE(rs.Fields("SCONTIESTESI").Value,".",","),2)
+						Else
+							mCGestDoc.RigaAttiva.ValoreCampo(20) = REPLACE(rs.Fields("SCONTIESTESI").Value,".",",")
+						End If
+					End If
+					If trim(rs.Fields("ANNOTAZIONIRIGA").Value)<>"" Then
+						mCGestDoc.RigaAttiva.ValoreCampo(38) = rs.Fields("ANNOTAZIONIRIGA").Value
+					End If
+					If trim(rs.Fields("RIFCOMMCLI").Value)<>"" Then
+						mCGestDoc.RigaAttiva.ValoreCampo(38) = rs.Fields("RIFCOMMCLI").Value
+					End If
+				End If				
+				rs.MoveNext
+			Wend		
+
+			Call mCGestDoc.Calcolo_Totali
+
+			'registrazione documento
+			intNewEsercizio = clng(mCGestDoc.xTDoc.GrInput("ESERCIZIO").ValoreCorrente)
+			lngNewNrDoc = clng(mCGestDoc.xTDoc.GrInput("NUMERODOC").ValoreCorrente)
+			strNewBis = " "
+
+			If mCGestDoc.Salva(intNewEsercizio, lngNewNrDoc, strNewBis) Then
+				DbConn.Execute("UPDATE MET_VISTARIGHEDOCDACREARE SET IMPORTATO=1 WHERE CODDOC='" & nPrev & "'")
+				strMessaggioLog="Generato documento | " & EDoc & " | " & Tdoc & " | " & lngNewNrDoc & " | " & Nrif & " | " & DDoc & " | " & CodCliente & " | " & now()
+				'Call file.WriteLine(strMessaggioLog)
+				Call MXNU.MsgBoxEX(strMessaggioLog, 64,"")
+			Else
+				Call MXNU.MsgBoxEX("Errore nella generazione del documento | " & EDoc & " | " & Tdoc & " | " & lngNewNrDoc & " | " & Nrif & " | " & DDoc & " | " & CodCliente & " | " & now(), 64,"")
+			End If
+
+			'termino oggetto gestione documenti
+			If Not mCGestDoc Is Nothing Then 
+				Call mCGestDoc.Termina
+				Set mCGestDoc = Nothing
+			End If
+
+			rs.Close
+			Set rs = Nothing
+
+		Next
+	End If
+
+	Call MXNU.ChiudiErroriSuLog
+	DBConn.Close
+	Set DBConn = Nothing
+	
+	'Chiudo file di log
+	file.Close
+	Set file = nothing
+	Set fs = nothing
+#ENDSCRIPT
+
+#ENDIF
+
+#MESSAGGIO 64;Elaborazione Terminata;Generazione Documenti!!

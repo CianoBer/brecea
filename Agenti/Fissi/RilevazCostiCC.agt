@@ -1,0 +1,67 @@
+// ------------------------------------------------------------- //
+// Cancellazione costi cicli ordini produzione da non cosiderare //
+// ------------------------------------------------------------- //
+// Rilevazione costo per operazione F011                         //
+// ------------------------------------------------------------- //
+
+
+
+[VALUTA]
+
+// Apertura connessione database
+#DBCONNETTI #0
+
+// Recupero progressivo e tipo commessa cliente
+#DBAPRITAB #0;#1;SELECT Progressivo, TipoCom FROM AnagraficaCommesse WHERE RifComm='$(PARAMETRO:0)'
+#IF {$(FINETABELLA)}=1
+	#LET V_Prog=0
+	#LETS V_TipoCom=
+#ELSE
+	#DBLEGGICAMPO #1;Progressivo;V_Prog
+	#DBLEGGICAMPOSTR #1;TipoCom;V_TipoCom
+#ENDIF
+#DBCHIUDITAB #1
+
+// Recupero documenti ordini di produzione da considerare
+#DBAPRITAB #0;#1;SELECT TipoOrdTrasfProd1 FROM TabParametriCommCli WHERE Codice='$(V_TipoCom)'
+#IF {$(FINETABELLA)}=1
+	#LET V_Prog=0
+#ELSE
+	#DBLEGGICAMPOSTR #1;TipoOrdTrasfProd1;V_TipiOrd
+#ENDIF
+#DBCHIUDITAB #1
+
+#IF {$(V_Prog)}>0
+
+	// Esegue cancellazione record
+	#CONCATENASTR V_Virg;","
+	#CONCATENASTR V_Apici;"', '"
+	#SOSTITUISCI V_TipiOrd;V_Virg;V_Apici;V_TipiOrd
+	#DBESEGUISQL #0;DELETE FROM CCBilancioConsLavInt WHERE IDCommCli={$(V_Prog)} AND (SELECT ROP.CodiceOrd FROM RigheOrdProd ROP WHERE ROP.IDTesta=CCBilancioConsLavInt.IDCommProd AND ROP.IDRiga=CCBilancioConsLavInt.IDOrdProd) NOT IN ('$(V_TipiOrd)')
+	#DBESEGUISQL #0;DELETE FROM CCBilancioConsLavEst WHERE IDCommCli={$(V_Prog)} AND TipoRecDett IN ('R2', 'R4', 'R5') AND (SELECT DISTINCT VBL.CodiceOrd FROM VistaBolleLavorazione VBL INNER JOIN RigheDocumenti RD ON VBL.AnnoBolla=RD.AnnoBollaCLF AND VBL.NumeroBolla=RD.NumeroBollaCLF WHERE RD.IDTesta=CCBilancioConsLavEst.IDTestaDoc AND RD.IDRiga=CCBilancioConsLavEst.IDRigaDoc) NOT IN ('$(V_TipiOrd)')
+	#DBESEGUISQL #0;DELETE FROM CCBilancioConsLavEst WHERE IDCommCli={$(V_Prog)} AND TipoRecDett IN ('R6') AND (SELECT DISTINCT VBL.CodiceOrd FROM VistaBolleLavorazione VBL WHERE VBL.IdTestaComm=CCBilancioConsLavEst.IDTestaDoc AND VBL.IdRigaComm=CCBilancioConsLavEst.IDRigaDoc) NOT IN ('$(V_TipiOrd)')
+
+	// Recupero decimali arrotondamento Euro
+	#DBAPRITAB #0;#1;SELECT TC1.CambioEuro, TC1.NDecimaliUnitario AS DecLire, TC2.NDecimaliUnitario AS DecEuro FROM TabVincoliGIC TV INNER JOIN TabCambi TC1 ON TV.DivisaLire=TC1.Codice INNER JOIN TabCambi TC2 ON TV.DivisaEuro=TC2.Codice WHERE TV.Esercizio={$(ANNOATTIVO)}
+	#IF {$(FINETABELLA)}=1
+		#LET dblCambio=1936.27
+		#LET intDecLire=0
+		#LET intDecEuro=4
+	#ELSE
+		#DBLEGGICAMPO #1;CambioEuro;dblCambio
+		#DBLEGGICAMPO #1;DecLire;intDecLire
+		#DBLEGGICAMPO #1;DecEuro;intDecEuro
+	#ENDIF
+	#DBCHIUDITAB #1
+
+	// Aggiornamento costo operazione F011
+	#DBESEGUISQL #0;UPDATE CCBilancioConsLavInt SET CostoSetup=0, CostoRis=round(TM.STDQODirettaMacchina*SA.OreMacchina*{$(dblCambio)}, {$(intDecLire)}), CostoUomo=0, CostoIndVar=0, CostoTotale=round(TM.STDQODirettaMacchina*SA.OreMacchina*{$(dblCambio)}, {$(intDecLire)}), CostoSetupEuro=0, CostoRisEuro=round(TM.STDQODirettaMacchina*SA.OreMacchina, {$(intDecEuro)}), CostoUomoEuro=0, CostoIndVarEuro=0, CostoTotaleEuro=round(TM.STDQODirettaMacchina*SA.OreMacchina, {$(intDecEuro)}) FROM CCBilancioConsLavInt CLI INNER JOIN TabellaMacchine TM ON CLI.CodMacchina=TM.Codice INNER JOIN StoricoAvanzamenti SA ON CLI.IDStoricoAvanz=SA.Progressivo WHERE CLI.IDCommCli={$(V_Prog)} AND CLI.CodOperazione='F011'
+#ENDIF
+
+//#APRIFILE #1;c:\pippo.txt;output
+//#SCRIVIFILE #1;INSERT INTO MET_LOGCONSCOMMESSE (COMMESSA,DATAESECUZIONE,UTENTEMODIFICA,DATAMODIFICA)('$(PARAMETRO:0)',GETDATE(),'$(UTENTE)',GETDATE()) 
+//#CHIUDIFILE #1
+#DBESEGUISQL #0;INSERT INTO MET_LOGCONSCOMMESSE (COMMESSA,DATAESECUZIONE,UTENTEMODIFICA,DATAMODIFICA)VALUES('$(PARAMETRO:0)',GETDATE(),'$(UTENTE)',GETDATE()) 
+
+// Chiusura connessione database
+#DBDISCONNETTI #0

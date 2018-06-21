@@ -1,0 +1,320 @@
+// ------------------------------------------------------------------ //
+// Recupero costo standard e calcolo scostamento ed apertura form     //
+// manutenzione costi per articolo su spread ordini da pianificazione //
+// ------------------------------------------------------------------ //
+
+
+
+[CONTROLLI]
+
+#form
+#com_1
+#ssProposte
+
+
+
+[FORM_LOAD]
+
+// Azzeramento flag calcolo eseguito al caricamento form
+#LET V_bolCalc=0
+#LET CALCESAURITO=0
+
+
+
+[COM_1_CLICK]
+
+// Azzeramento flag calcolo eseguito alla pressione pulsante Indietro
+#LET V_bolCalc=0
+#LET CALCESAURITO=0
+
+
+[SSPROPOSTE_CLICK]
+
+#MODESCLUSIVA
+
+// Salvataggio colonna e riga attiva
+#LET V_Col={$(COLONNAATTIVA)}
+#LET V_Riga={$(RIGAATTIVA)}
+
+// Procedura di recupero costo standard e calcolo scostamento su tutte le righe
+#IF {$(V_bolCalc)}=0
+	#SCRIPT VBScript
+
+		Dim MXUT, strFileINI, strIDCosto, ssProp, I
+		Dim strArt, strUM, strDtDoc, lngVal, dblPrzL, strSct, dblSct, dblPrzN
+		Dim strQuery, rsSS, dblCambio, dblCosto, dblScost
+
+		' Impostazione ambiente MXUtil
+		Set MXUT = CreateObject("MXUtil.XUtil")
+
+		If Not MXUT Is Nothing And MXNU.FrmMetodo.FormAttiva.HelpContextID = 5020 Then
+
+			' Recupero ID costo da file INI
+			strFileINI = MXUT.CercaDirFile("ConfigPers.ini", MXNU.PercorsoPers & "\" & MXNU.DittaAttiva & ";" & MXNU.PercorsoPers)
+		    strIDCosto = MXNU.LeggiProfilo(strFileINI, "COSTISTDDOC", "IDCosto", "")
+
+			' Recupero oggetto spread
+			Set ssProp = MXNU.FrmMetodo.FormAttiva.ssProposte
+
+			' Ciclo lettura righe
+			I = 1
+			Call ssProp.GetText(10, I, strArt)
+			Do While Trim(strArt)<>""
+
+				' Recupero dati articolo necessari da riga
+				Call ssProp.GetText(14, I, strUM)
+				Call ssProp.GetText(30, I, strDtDoc)
+				strDtDoc = Right(strDtDoc, 4) & "-" & Mid(strDtDoc, 4, 2) & "-" & Left(strDtDoc, 2)
+				Call ssProp.GetText(34, I, lngVal)
+				lngVal = CLng(lngVal)
+				Call ssProp.GetText(36, I, dblPrzL)
+				dblPrzL = CDbl(dblPrzL)
+				Call ssProp.GetText(37, I, strSct)
+				dblSct = CDbl(MXUT.ConvSconto(strSct))
+
+				' Recupero cambio divisa con Euro
+				If lngVal = CLng(MXNU.CodCambioEuro) Then
+					dblCambio = 1
+				Else
+					strQuery = "SELECT (CASE TC.TipoEuro WHEN 1 THEN TC.CambioEuro ELSE isnull(VC.Valore, 1) END) AS Cambio FROM TabCambi TC LEFT OUTER JOIN ValoriCambio VC ON TC.Codice=VC.CodCambio AND VC.Data={d '" & strDtDoc & "'} WHERE TC.Codice=" & lngVal
+					Set rsSS = MXDB.dbCreaSS((hndDBArchivi), strQuery)
+					If MXDB.dbFineTab((rsSS)) Then
+						dblCambio = 1
+					Else
+						dblCambio = CDbl(MXDB.dbGetCampo((rsSS), rsSS.Tipo, "Cambio", 1))
+					End If
+					Call MXDB.dbChiudiSS((rsSS))
+				End If
+
+				' Calcolo e scrittura prezzo netto in Euro
+				dblPrzN = CDbl(MXUT.fdec((dblPrzL * (100 - dblSct) / 100 / dblCambio), MXNU.DecimaliEuroUnitario))
+				Call ssProp.SetText(38, I, dblPrzN)
+
+				' Recupero costo standard
+				strQuery = "SELECT ((TCP.CP_MaterialeEuro + TCP.CA_MaterialeEuro + TCP.CP_LavInternaEuro + TCP.CA_LavInternaEuro + TCP.CP_LavEsternaEuro + TCP.CA_LavEsternaEuro + TCP.CP_IndVariabileEuro + TCP.CA_IndVariabileEuro + TCP.CP_IndFissoEuro + TCP.CA_IndFissoEuro)*AFC.Fattore) AS CostoSTD FROM TabCostiProdotto TCP INNER JOIN ArticoliFattoriConversione AFC ON TCP.Articolo=AFC.CodArt AND TCP.UMRif=AFC.UM1 WHERE TCP.Articolo='" & strArt & "' AND TCP.IDCosto='" & strIDCosto & "' AND AFC.UM2='" & strUM & "'"
+				Set rsSS = MXDB.dbCreaSS((hndDBArchivi), strQuery)
+				If MXDB.dbFineTab((rsSS)) Then
+					Call MXDB.dbChiudiSS((rsSS))
+					strQuery = "SELECT ((TCP.CP_MaterialeEuro + TCP.CA_MaterialeEuro + TCP.CP_LavInternaEuro + TCP.CA_LavInternaEuro + TCP.CP_LavEsternaEuro + TCP.CA_LavEsternaEuro + TCP.CP_IndVariabileEuro + TCP.CA_IndVariabileEuro + TCP.CP_IndFissoEuro + TCP.CA_IndFissoEuro)*AFC.Fattore) AS CostoSTD FROM TabCostiProdotto TCP INNER JOIN ArticoliUMPreferite AUP ON TCP.Articolo=AUP.CodArt AND AUP.TipoUM=1 INNER JOIN ArticoliFattoriConversione AFC ON TCP.Articolo=AFC.CodArt AND AUP.UM=AFC.UM1 WHERE TCP.Articolo='" & strArt & "' AND TCP.IDCosto='" & strIDCosto & "' AND AFC.UM2='" & strUM & "'"
+					Set rsSS = MXDB.dbCreaSS((hndDBArchivi), strQuery)
+					If MXDB.dbFineTab((rsSS)) Then
+						dblCosto = 0
+					Else
+						dblCosto = CDbl(MXDB.dbGetCampo((rsSS), rsSS.Tipo, "CostoSTD", 0))
+					End If
+				Else
+					dblCosto = CDbl(MXDB.dbGetCampo((rsSS), rsSS.Tipo, "CostoSTD", 0))
+				End If
+				Call MXDB.dbChiudiSS((rsSS))
+
+				' Scrittura costo standard e scostamento
+				dblCosto = CDbl(MXUT.fdec(dblCosto, MXNU.DecimaliEuroUnitario))
+				Call ssProp.SetText(39, I, dblCosto)
+				dblScost = CDbl(MXUT.fdec((dblPrzN - dblCosto), MXNU.DecimaliEuroUnitario))
+				Call ssProp.SetText(40, I, dblScost)
+
+				' Evidenziazione cella scostamento
+				ssProp.Row = I
+				ssProp.Col = 40
+				If dblPrzN > dblCosto Then
+					ssProp.FontBold = True
+					ssProp.FontUnderline = True
+				Else
+					ssProp.FontBold = False
+					ssProp.FontUnderline = False
+				End If
+
+				' Lettura prossima riga
+				I = I + 1
+				If I > ssProp.MaxRows Then
+					strArt = ""
+				Else
+					Call ssProp.GetText(10, I, strArt)
+				End If
+			Loop
+		End If
+
+		Set rsSS = Nothing
+		Set ssProp = Nothing
+		Set MXUT = Nothing
+
+	#ENDSCRIPT
+
+	// Indica che il calcolo è già stato eseguito
+	#LET V_bolCalc=1
+#ENDIF
+
+#FINEMODESCLUSIVA
+
+// Procedura di apertura form manutenzione costi per articolo
+#IF {$(V_Col)}=41
+
+	// Recupero articolo riga attiva
+	#FRMLEGGICELLA #ssProposte;10;{$(V_Riga)};V_Art
+
+	#SCRIPT VBScript
+
+		Dim strArt, colValoriChiave, frmAtt
+
+		' Apertura form manutenzione costi
+		Call MXNU.FrmMetodo.EseguiAzione("UtilitaCostiItem", 5, 5846)
+
+		' Recupero codice articolo
+		strArt = AGTVAR.Item("V_Art")
+
+		' Passaggio codice articolo alla form manutenzione costi
+		Set colValoriChiave = VBCollection
+		colValoriChiave.Add strArt
+		For Each frmAtt in MXNU.FrmMetodo.MDIForms
+			If frmAtt.Name = "frmCostiSTDArt" And frmAtt.HelpContextID = 5846 Then
+				Call frmAtt.AzioniMetodo(11, colValoriChiave)
+			End If
+		Next
+
+		Set frmAtt = Nothing
+		Set colValoriChiave = Nothing
+
+	#ENDSCRIPT
+#ENDIF
+
+//COLORAZIONE RIGHE FOGLIO EMISSIONE ORDINI DA PIANO
+#MODESCLUSIVA
+	#IF {$(CALCESAURITO)}=0
+		#DBCONNETTI #0
+			#FRMGRIGLIA #SSPROPOSTE;1;1;-4
+			#LET RIGA=1
+			#DO
+				#FRMLEGGICELLA #SSPROPOSTE;10;$(RIGA);CODART
+				#DBAPRITAB #0;#1;SELECT CODICEART FROM ANAGRAFICAARTICOLICOMM WHERE CODICEART='$(CODART)' AND ESERCIZIO=$(ANNOATTIVO) AND ESAURITO=1
+					#IF $(FINETABELLA)=1
+					#ELSE
+						//#MESSAGGIO 16;Attenzione: articolo $(parametro:0) esaurito!
+							#SCRIPT VBSCRIPT
+								If MXNU.EXEName = "MetodoEvolus" Then
+									dim frmDoc
+									Set frmDoc = MXNU.FrmMetodo.FormAttiva
+									If (Not frmDoc Is Nothing) Then
+										If (frmDoc.HelpContextID = 5020) Then
+											Riga = AgtVar.Item("RIGA")
+											frmDoc.ssProposte.Col = -1
+											frmDoc.ssProposte.Row = Riga
+											frmDoc.ssProposte.ForeColor = RGB(0,0,0)
+											frmDoc.ssProposte.BackColor = RGB(255,100,120)							
+										End If
+									End If
+									Set frmDoc = Nothing
+								End If
+							#ENDSCRIPT
+					#ENDIF
+				#DBCHIUDITAB #1 
+				#LET RIGA={$(RIGA)+1}
+			#LOOP {$(RIGA)}>{$(RIGHEFOGLIO)}
+		#DBDISCONNETTI #0
+		#LET CALCESAURITO=1
+	#ENDIF
+#FINEMODESCLUSIVA
+
+
+[SSPROPOSTE_AFTER_EDIT]
+#MODESCLUSIVA
+// Salvataggio colonna e riga attiva
+#LET V_Col={$(COLONNAATTIVA)}
+#LET V_Riga={$(RIGAATTIVA)}
+
+// Procedura di recupero costo standard e calcolo scostamento sulla riga attiva
+// dopo modifica campi che possono influenzare il prezzo
+#IF {$(V_Col)}=6 | {$(V_Col)}=10 | {$(V_Col)}=13 | {$(V_Col)}=14 | {$(V_Col)}=30 | {$(V_Col)}=31 | {$(V_Col)}=32 | {$(V_Col)}=34 | {$(V_Col)}=36 | {$(V_Col)}=37
+	#SCRIPT VBScript
+
+		Dim MXUT, strFileINI, strIDCosto, ssProp, lngRiga
+		Dim strArt, strUM, strDtDoc, lngVal, dblPrzL, strSct, dblSct, dblPrzN
+		Dim strQuery, rsSS, dblCambio, dblCosto, dblScost
+
+		' Impostazione ambiente MXUtil
+		Set MXUT = CreateObject("MXUtil.XUtil")
+
+		If Not MXUT Is Nothing And MXNU.FrmMetodo.FormAttiva.HelpContextID = 5020 Then
+
+			' Recupero ID costo da file INI
+			strFileINI = MXUT.CercaDirFile("ConfigPers.ini", MXNU.PercorsoPers & "\" & MXNU.DittaAttiva & ";" & MXNU.PercorsoPers)
+		    strIDCosto = MXNU.LeggiProfilo(strFileINI, "COSTISTDDOC", "IDCosto", "")
+
+			' Recupero oggetto spread
+			Set ssProp = MXNU.FrmMetodo.FormAttiva.ssProposte
+
+			' Recupero riga attiva
+			lngRiga = CLng(AGTVAR.Item("V_Riga"))
+
+			' Recupero dati articolo necessari da riga
+			Call ssProp.GetText(10, lngRiga, strArt)
+			Call ssProp.GetText(14, lngRiga, strUM)
+			Call ssProp.GetText(30, lngRiga, strDtDoc)
+			strDtDoc = Right(strDtDoc, 4) & "-" & Mid(strDtDoc, 4, 2) & "-" & Left(strDtDoc, 2)
+			Call ssProp.GetText(34, lngRiga, lngVal)
+			lngVal = CLng(lngVal)
+			Call ssProp.GetText(36, lngRiga, dblPrzL)
+			dblPrzL = CDbl(dblPrzL)
+			Call ssProp.GetText(37, lngRiga, strSct)
+			dblSct = CDbl(MXUT.ConvSconto(strSct))
+
+			' Recupero cambio divisa con Euro
+			If lngVal = CLng(MXNU.CodCambioEuro) Then
+				dblCambio = 1
+			Else
+				strQuery = "SELECT (CASE TC.TipoEuro WHEN 1 THEN TC.CambioEuro ELSE isnull(VC.Valore, 1) END) AS Cambio FROM TabCambi TC LEFT OUTER JOIN ValoriCambio VC ON TC.Codice=VC.CodCambio AND VC.Data={d '" & strDtDoc & "'} WHERE TC.Codice=" & lngVal
+				Set rsSS = MXDB.dbCreaSS((hndDBArchivi), strQuery)
+				If MXDB.dbFineTab((rsSS)) Then
+					dblCambio = 1
+				Else
+					dblCambio = CDbl(MXDB.dbGetCampo((rsSS), rsSS.Tipo, "Cambio", 1))
+				End If
+				Call MXDB.dbChiudiSS((rsSS))
+			End If
+
+			' Calcolo e scrittura prezzo netto in Euro
+			dblPrzN = CDbl(MXUT.fdec((dblPrzL * (100 - dblSct) / 100 / dblCambio), MXNU.DecimaliEuroUnitario))
+			Call ssProp.SetText(38, lngRiga, dblPrzN)
+
+			' Recupero costo standard
+			strQuery = "SELECT ((TCP.CP_MaterialeEuro + TCP.CA_MaterialeEuro + TCP.CP_LavInternaEuro + TCP.CA_LavInternaEuro + TCP.CP_LavEsternaEuro + TCP.CA_LavEsternaEuro + TCP.CP_IndVariabileEuro + TCP.CA_IndVariabileEuro + TCP.CP_IndFissoEuro + TCP.CA_IndFissoEuro)*AFC.Fattore) AS CostoSTD FROM TabCostiProdotto TCP INNER JOIN ArticoliFattoriConversione AFC ON TCP.Articolo=AFC.CodArt AND TCP.UMRif=AFC.UM1 WHERE TCP.Articolo='" & strArt & "' AND TCP.IDCosto='" & strIDCosto & "' AND AFC.UM2='" & strUM & "'"
+			Set rsSS = MXDB.dbCreaSS((hndDBArchivi), strQuery)
+			If MXDB.dbFineTab((rsSS)) Then
+				Call MXDB.dbChiudiSS((rsSS))
+				strQuery = "SELECT ((TCP.CP_MaterialeEuro + TCP.CA_MaterialeEuro + TCP.CP_LavInternaEuro + TCP.CA_LavInternaEuro + TCP.CP_LavEsternaEuro + TCP.CA_LavEsternaEuro + TCP.CP_IndVariabileEuro + TCP.CA_IndVariabileEuro + TCP.CP_IndFissoEuro + TCP.CA_IndFissoEuro)*AFC.Fattore) AS CostoSTD FROM TabCostiProdotto TCP INNER JOIN ArticoliUMPreferite AUP ON TCP.Articolo=AUP.CodArt AND AUP.TipoUM=1 INNER JOIN ArticoliFattoriConversione AFC ON TCP.Articolo=AFC.CodArt AND AUP.UM=AFC.UM1 WHERE TCP.Articolo='" & strArt & "' AND TCP.IDCosto='" & strIDCosto & "' AND AFC.UM2='" & strUM & "'"
+				Set rsSS = MXDB.dbCreaSS((hndDBArchivi), strQuery)
+				If MXDB.dbFineTab((rsSS)) Then
+					dblCosto = 0
+				Else
+					dblCosto = CDbl(MXDB.dbGetCampo((rsSS), rsSS.Tipo, "CostoSTD", 0))
+				End If
+			Else
+				dblCosto = CDbl(MXDB.dbGetCampo((rsSS), rsSS.Tipo, "CostoSTD", 0))
+			End If
+			Call MXDB.dbChiudiSS((rsSS))
+
+			' Scrittura costo standard e scostamento
+			dblCosto = CDbl(MXUT.fdec(dblCosto, MXNU.DecimaliEuroUnitario))
+			Call ssProp.SetText(39, lngRiga, dblCosto)
+			dblScost = CDbl(MXUT.fdec((dblPrzN - dblCosto), MXNU.DecimaliEuroUnitario))
+			Call ssProp.SetText(40, lngRiga, dblScost)
+
+			' Evidenziazione cella scostamento
+			ssProp.Row = lngRiga
+			ssProp.Col = 40
+			If dblPrzN > dblCosto Then
+				ssProp.FontBold = True
+				ssProp.FontUnderline = True
+			Else
+				ssProp.FontBold = False
+				ssProp.FontUnderline = False
+			End If
+		End If
+
+		Set rsSS = Nothing
+		Set ssProp = Nothing
+		Set MXUT = Nothing
+
+	#ENDSCRIPT
+#ENDIF
+
+#FINEMODESCLUSIVA

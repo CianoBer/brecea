@@ -1,0 +1,54 @@
+// ----------------------------------------------------------------------------------- //
+// Agente su form stampa pianificazione materiali per macchina (con esplosione dba)	   //
+// ----------------------------------------------------------------------------------- //
+//
+//PROGRESSIVI CONNESSIONI
+//0 - CONNESSIONE PREDEFINITA
+
+[CONTROLLI]
+#COMPROCEDI
+
+[COMPROCEDI_Click]
+#CHR 13;cr
+#CHR 32;b
+#CHR 44;v
+#CHR 45;TRATTINO
+
+#MOSTRAMSGSTATO Esplosione DBA Macchina...
+
+
+
+	//LETTURA FILTRO
+	#DISABILITAVALUTAZIONE 1
+	#LETS COMPOSTO=
+	#LET I=1
+	#DO
+		#FRMLEGGICELLA #SSFILTRO;2;$(I);DSCFILTRO
+		#FRMLEGGICELLA #SSFILTRO;4;$(I);VALOREDAFILTRO		
+		
+		#IF $(DSCFILTRO)==Articolo Composto
+			#LETS COMPOSTO=$(VALOREDAFILTRO)			
+		#ENDIF
+
+		#LET I = $(I) + 1
+	#LOOP $(I)>20
+	#DISABILITAVALUTAZIONE 0
+	//FINE LETTURA FILTRO
+	
+	
+	//LANCIO SP PER POPOLAZIONE TABELLA TEMPORANEA
+	
+	#IF $(COMPOSTO)==
+		#MESSAGGIO 0;Indicare il codice macchina sulla riga Articolo Composto!;Attenzione!
+	#ELSE
+	
+		#DBCONNETTI #0
+
+		#LETS SQLSPTEMP=EXECUTE DBO.BRECEA_ESPLODIDBA '$(COMPOSTO)'$(V)$(NRTERMINALE)
+		#DBESEGUISQL #0;$(SQLSPTEMP)
+
+		#DBDISCONNETTI #0
+
+	#ENDIF
+	
+#CANCELLAMSGSTATO

@@ -1,0 +1,137 @@
+// -------------------------------------------------------------------------------- //
+// Trasformazione a NULL delle date cancellate in ExtraRigheDoc (valore 31/12/1899) //
+//0	Esercizio del documento
+//1	Codice del documento
+//2	Numero del documento
+//3	Bis
+//4	tipo delle righe documento  000..999
+//5	tipo del piede documento  000..999
+//6	ID della testa del documento nella tabella TesteDocumenti
+//7	Valore che identifica se il documento sul quale si sta eseguendo l’operazione è il documento prelevato (1) 
+//	oppure il documento principale che si sta registrando (0).
+
+// -------------------------------------------------------------------------------- //
+// Calcolo costi STD e scostamento per righe non nate da inserimento manuale        //
+// -------------------------------------------------------------------------------- //
+[VALUTA]
+#MODESCLUSIVA
+
+// Apertura connessione database
+#DBCONNETTI #0
+
+// Aggiornamento date in ExtraRigheDoc
+#LET V_IDTesta={$(PARAMETRO:6)}
+#DBESEGUISQL #0;UPDATE EXTRARIGHEDOC SET DATARICH=RD.DATACONSEGNA FROM EXTRARIGHEDOC XD INNER JOIN RIGHEDOCUMENTI RD ON XD.IDTESTA=RD.IDTESTA AND XD.IDRIGA=RD.IDRIGA WHERE RD.IDTESTA={$(V_IDTesta)} AND (XD.DATARICH IS NULL OR XD.DATARICH<'19000101')
+#DBAPRITAB #0;#1;SELECT * FROM EXTRAPARDOC WHERE CODICE='$(PARAMETRO:1)' AND FOGLIOVIAGGIO=1
+#IF $(FINETABELLA)=1
+	#DBESEGUISQL #0;UPDATE ExtraRigheDoc SET DataConf=NULL WHERE IDTesta={$(V_IDTesta)} AND (ChkConf<>1 OR DataConf<'19000101')
+#ELSE
+	#DBESEGUISQL #0;UPDATE ExtraRigheDoc SET DataConf=NULL WHERE IDTesta={$(V_IDTesta)} AND DataConf<'19000101'
+#ENDIF
+#DBCHIUDITAB #1
+
+
+
+// Procedura calcolo costi standard e scostamenti
+#SCRIPT VBScript
+
+	Dim MXUT, strFileINI, strIDCosto
+	Dim lngIDT, strQuery, rsSS1
+	Dim lngRiga, strArt, strUM, dblPrz
+	Dim rsSS2, dblCosto
+
+	' Impostazione ambiente MXUtil
+	Set MXUT = CreateObject("MXUtil.XUtil")
+	If Not MXUT Is Nothing Then
+
+		' Recupero ID costo da file INI
+		strFileINI = MXUT.CercaDirFile("ConfigPers.ini", MXNU.PercorsoPers & "\" & MXNU.DittaAttiva & ";" & MXNU.PercorsoPers)
+		strIDCosto = MXNU.LeggiProfilo(strFileINI, "COSTISTDDOC", "IDCosto", "")
+
+		' Recupero righe da ricalcolare
+		lngIDT = CLng(AGTVAR.Item("V_IDTesta"))
+		strQuery = "SELECT RD.IDRiga, RD.CodArt, RD.UMPrezzo, RD.PrezzoUnitNettoEuro FROM RigheDocumenti RD INNER JOIN ExtraRigheDoc ERD ON RD.IDTesta=ERD.IDTesta AND RD.IDRiga=ERD.IDRiga WHERE RD.IDTesta=" & lngIDT & " AND (RD.PrezzoUnitNettoEuro-ERD.CostoSTD)<>ERD.Scostamento"
+		Set rsSS1 = MXDB.dbCreaSS((hndDBArchivi), strQuery)
+		Call MXDB.dbPrimo((rsSS1))
+		Do While Not MXDB.dbFineTab((rsSS1))
+
+			' Recupero dati necessari da riga
+			lngRiga = CLng(MXDB.dbGetCampo((rsSS1), rsSS1.Tipo, "IDRiga", 0))
+			strArt = MXDB.dbGetCampo((rsSS1), rsSS1.Tipo, "CodArt", "")
+			strUM = MXDB.dbGetCampo((rsSS1), rsSS1.Tipo, "UMPrezzo", "")
+			dblPrz = CDbl(MXDB.dbGetCampo((rsSS1), rsSS1.Tipo, "PrezzoUnitNettoEuro", 0))
+
+			' Recupero costo standard
+			strQuery = "SELECT ((TCP.CP_MaterialeEuro + TCP.CA_MaterialeEuro + TCP.CP_LavInternaEuro + TCP.CA_LavInternaEuro + TCP.CP_LavEsternaEuro + TCP.CA_LavEsternaEuro + TCP.CP_IndVariabileEuro + TCP.CA_IndVariabileEuro + TCP.CP_IndFissoEuro + TCP.CA_IndFissoEuro)*AFC.Fattore) AS CostoSTD FROM TabCostiProdotto TCP INNER JOIN ArticoliFattoriConversione AFC ON TCP.Articolo=AFC.CodArt AND TCP.UMRif=AFC.UM1 WHERE TCP.Articolo='" & strArt & "' AND TCP.IDCosto='" & strIDCosto & "' AND AFC.UM2='" & strUM & "'"
+			Set rsSS2 = MXDB.dbCreaSS((hndDBArchivi), strQuery)
+			If MXDB.dbFineTab((rsSS2)) Then
+				Call MXDB.dbChiudiSS((rsSS2))
+				strQuery = "SELECT ((TCP.CP_MaterialeEuro + TCP.CA_MaterialeEuro + TCP.CP_LavInternaEuro + TCP.CA_LavInternaEuro + TCP.CP_LavEsternaEuro + TCP.CA_LavEsternaEuro + TCP.CP_IndVariabileEuro + TCP.CA_IndVariabileEuro + TCP.CP_IndFissoEuro + TCP.CA_IndFissoEuro)*AFC.Fattore) AS CostoSTD FROM TabCostiProdotto TCP INNER JOIN ArticoliUMPreferite AUP ON TCP.Articolo=AUP.CodArt AND AUP.TipoUM=1 INNER JOIN ArticoliFattoriConversione AFC ON TCP.Articolo=AFC.CodArt AND AUP.UM=AFC.UM1 WHERE TCP.Articolo='" & strArt & "' AND TCP.IDCosto='" & strIDCosto & "' AND AFC.UM2='" & strUM & "'"
+				Set rsSS2 = MXDB.dbCreaSS((hndDBArchivi), strQuery)
+				If MXDB.dbFineTab((rsSS2)) Then
+					dblCosto = 0
+				Else
+					dblCosto = CDbl(MXDB.dbGetCampo((rsSS2), rsSS2.Tipo, "CostoSTD", 0))
+				End If
+			Else
+				dblCosto = CDbl(MXDB.dbGetCampo((rsSS2), rsSS2.Tipo, "CostoSTD", 0))
+			End If
+			Call MXDB.dbChiudiSS((rsSS2))
+
+			' Scrittura costo standard e scostamento
+			dblScost = Replace(MXUT.fdec((dblPrz - dblCosto), MXNU.DecimaliEuroUnitario), ",", ".")
+			dblCosto = Replace(MXUT.fdec(dblCosto, MXNU.DecimaliEuroUnitario), ",", ".")
+			strQuery = "UPDATE ExtraRigheDoc SET CostoSTD=" & dblCosto & ", Scostamento=" & dblScost & " WHERE IDTesta=" & lngIDT & " AND IDRiga=" & lngRiga
+			Call MXDB.dbEseguiSQL((hndDBArchivi), strQuery)
+
+			' Lettura riga successiva
+			Call MXDB.dbSuccessivo((rsSS1))
+		Loop
+		Call MXDB.dbChiudiSS((rsSS1))
+	End If
+
+	Set rsSS2 = Nothing
+	Set rsSS1 = Nothing
+	Set MXUT = Nothing
+
+#ENDSCRIPT
+
+//AGGIORNO IL CAMPO EXTRA PER I RIFERIMENTI IN LINGUA DA STAMPARE NEI DOCUMENTI.
+#IF $(PARAMETRO:7)=0
+	//#DBESEGUISQL #0;UPDATE EXTRARIGHEDOC SET RIFDOCLINGUA=MV.RIFDOCUMENTO FROM EXTRARIGHEDOC X INNER JOIN MET_VISTARIGHEDOCRIFDOCUMENTO MV ON MV.IDTESTA=X.IDTESTA AND MV.IDRIGA=X.IDRIGA WHERE MV.RIFDOCUMENTO IS NOT NULL AND MV.LINGUA<>0 AND X.IDTESTA=$(PARAMETRO:6)
+	#DBESEGUISQL #0;UPDATE RIGHEDOCUMENTI SET DESCRIZIONEART=MV.RIFDOCUMENTO FROM RIGHEDOCUMENTI X INNER JOIN MET_VISTARIGHEDOCRIFDOCUMENTO MV ON MV.IDTESTA=X.IDTESTA AND MV.IDRIGA=X.IDRIGA WHERE MV.RIFDOCUMENTO IS NOT NULL AND MV.LINGUA<>0 AND X.IDTESTA=$(PARAMETRO:6)
+#ENDIF
+
+
+
+
+//INIZIO MODOFICA GIGI 15/02/2011 - GESTIONE ATTIVITA' MOX.WA
+//VERIFICO SE IL PARAMETRO GESTISCE LE MISSIONI MOXWA
+#IF $(PARAMETRO:7)=0
+	#LETS TIPODOC=$(PARAMETRO:1)	
+	#LEGGIFILEINI $(PERCORSOMETODO)\PERS\MOXWA.INI;MISSIONI;$(TIPODOC);NONATTIVA;ATTIVAMISSIONI
+	#IF $(ATTIVAMISSIONI)==ATTIVA
+		//LEGGO L'AZIONE DA ASSOCIARE
+		#LEGGIFILEINI $(PERCORSOMETODO)\PERS\MOXWA.INI;$(TIPODOC);AZIONE;NESSUNA;AZIONE
+		#IF $(AZIONE)<>NESSUNA
+			#DBCONNETTI #0
+			#DBESEGUISQL #0;exec dbo.MOXWA_CreaMissioneDaDocumento $(PARAMETRO:6), $(AZIONE)
+		#ENDIF
+	#ENDIF	
+#ENDIF
+//FINE MODOFICA GIGI 15/02/2011
+
+
+#PROCEDURA AGGPRZSC.PRC
+
+//DANIELE R. 22/05/2012
+//INSERISCO O MODIFICO IL CAMPO RIFRELAZIONECF NELLE RIGHE DOCUMENTI
+//VALE ANCHE NEI DOCUMENTI FORNITORI CHE PRELEVANO DOC. CLIENTI E CAMBIA IL CODICE DI RELAZIONE
+#IF $(PARAMETRO:7)=0
+	#DBESEGUISQL #0;UPDATE RIGHEDOCUMENTI SET RIFRELAZIONECF=V.RIFERIMENTO FROM RIGHEDOCUMENTI AS R INNER JOIN TESTEDOCUMENTI AS T ON R.IDTESTA=T.PROGRESSIVO INNER JOIN VISTARELAZIONICFV AS V ON T.CODCLIFOR=V.CODCLIFOR AND R.CODART=V.CODARTICOLO WHERE T.PROGRESSIVO=$(PARAMETRO:6) --AND R.RIFRELAZIONECF=''
+#ENDIF
+	
+// Chiusura connessione database
+#DBDISCONNETTI #0
+
+#FINEMODESCLUSIVA

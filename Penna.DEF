@@ -1,0 +1,169 @@
+[GENERALE]
+;PROTOCOLLO=<DLL>.<Classe Penna>
+;Protocolli già sviluppati
+;	MXPenna.HDFormula		per gestione penne Formula
+;	MXPenna.HDDataLogic		per gestione penne DataLogic famiglia MS15
+;	MXPenna.HDDLMw25		per gestione penne DataLogic famiglia MW25
+;	MXPenna.HDTextFile		per la gestione di file di testo
+;	MXPenna.HDExcel			per la gestione di file Excel
+;	HDBancoliniX22;Bancolini	per la gestione penne Bancolini con protocollo X22
+;	MXPenna.HDBancoliniSSCC		per la lettura delle etichette logistiche con penne Bancolini
+;	MXPenna.HDUnitech		per la gestione penne Unitech
+PROTOCOLLO1=MXPenna.HDTextFile;File di Testo
+PROTOCOLLO2=MXPenna.HDBancoliniX22;Bancolini
+PROTOCOLLO3=MXPenna.HDBancoliniSSCC;Bancolini SSCC 
+PROTOCOLLO4=MXPenna.HDFormula;Formula
+PROTOCOLLO5=MXPenna.HDExcel;File di Excel
+PROTOCOLLO6=MXPenna.HDDLMw25;DataLogicMW25
+PROTOCOLLO7=MXPenna.HDDataLogic;DataLogic
+PROTOCOLLO8=MXPenna.HDUnitech;Unitech
+
+;NomeDatabase=<NomeDB>
+;<DataField Penna>=<DataField Tabella>
+
+[MATRICOLE]
+;Matricola			-> matricola
+NomeDatabase=MATRICOLE
+Matricola=Matricola
+
+[ANALISI_CONSEGNE]
+;CodArt				->	codice articolo
+;Giacenza			->	quantità
+;NrRifPartita		->	partita
+;Ubicazione			->	ubicazione
+;Esercizio			->  esercizio Documento Da Evadere
+;TipoDoc			->  Tipo Documento Da Evadere
+;NumeroDoc			->  Numero Documento Da Evadere
+;Bis				->  Bis Documento Da Evadere
+NomeDatabase=ANALISI_CONSEGNE
+TipoDoc=TipoDoc
+CodArt=CodArt
+Giacenza=Giacenza
+NumeroDoc=NumeroDoc
+NrRifPartita=NrRifPartita
+
+[INVENTARIO]
+;datafield standard per controllo inventario
+;Articolo		->	codice articolo
+;Quantita		->	quantità
+;NrRifPartita		->	partita
+;CodUbicazione		->	ubicazione
+NomeDatabase=INVENTARIO
+Articolo=Articolo
+Quantita=Quantita
+
+[VENDITABANCO]
+NomeDataBase=VENDITABANCO
+Articolo=Articolo
+Quantita=Quantita
+;PrezzoUnitLordoEuro=PrezzoUnitLordoEuro
+;ScontiEstesi=ScontiEstesi
+
+[ALLMATERIALI]
+;datafield standard per controllo inventario
+;CodArt			->	codice articolo
+;Quantita		->	quantità
+;CodCliFor		->	codice cliente/fornitore
+;Partita		->	partita
+;CodUbicazione		->	ubicazione
+NomeDataBase=ALLMATERIALI
+Articolo=CodArt
+Quantita=Quantita
+Partita=CodPartita
+
+[AUTOMSPEDIZ]
+;codart
+;quantita
+;nrpartita
+;dataconsegna
+NomeDataBase=AUTOMSPEDIZ
+Campo1=CAMPO002
+Campo2=CAMPO011
+Campo3=CAMPO006
+
+[LISTEMOVIMENTAZIONE]
+;I nomi dei campi da utilizzare devono essere reperiti dal file GESTPROD.INI nella sezione [LSTMOV VARIABILIRIGA]
+;NOTA: il campo che contiene lo split partite è 'partite'; per le partite è possibile inserire 
+;	più partite con la seguente sintassi:
+;      <PARTITA>:<QUANTITA>;[<PARTITA>:<QUANTITA>;<PARTITA>:<QUANTITA>;...]
+;      se non viene inserito il campo quantità viene riportata la quantità residua
+NomeDataBase=LISTEMOVIMENTAZIONE
+op_tipocom=OP_TIPOCOM
+op_esercizio=OP_ESERCIZIO
+op_numerocom=OP_NUMEROCOM
+codart=CODART
+qtamovgestione=QTAMOVGESTIONE
+deposito=DEPOSITO
+note=NOTE
+
+[LISTETRASFERIMENTO]
+;I nomi dei campi da utilizzare devono essere reperiti dal file GESTPROD.INI nella sezione [LSTTRASF VARIABILIRIGA]
+NomeDataBase=LISTETRASFERIMENTO
+codart=CODART
+qtatrasfgestione=QTATRASFGESTIONE
+
+[LISTECONSUNTIVAZIONE]
+;I nomi dei campi da utilizzare devono essere reperiti dal file GESTCICLI.INI nella sezione [LISTA VARIABILIRIGA]
+;NOTA: il campo che contiene la lista di operai è 'operai'; è possibile inserire più operai con la seguente sintassi:
+;      <OPERAIO>;[<OPERAIO>;...]
+NomeDataBase=LISTECONSUNTIVAZIONE
+datamov=DATAMOV
+annobolla=ANNOBOLLA
+numerobolla=NUMEROBOLLA
+oredurata=OREDURATA
+oremovimentazione=OREMOVIMENTAZIONE
+qtaversata=QTAVERSATA
+qtascartata=QTASCARTATA
+operai=OPERAI
+
+[ANALISIFORECAST]
+NomeDataBase=ANALISIFORECAST
+ARTICOLO=ARTICOLO
+QTAPREVISTA=QTAPREVISTA
+
+
+[MISSIONI]
+NomeDataBase=MISSIONI
+;Nel Caso in cui il Leggi Penna Procede per IDTESTA/IDRIGA:
+;IDTESTA=IDTESTA DI TabRigheDocumentiMiss
+;IDRIGA=IDRIGA DI TabRigheDocumentiMiss
+;ALTRIMENTI:
+;IDTESTA=PROGRESSIVO DI TABTESTEMISSIONI
+;IDRIGA=PROGRESSDOC DI TabTesteDocumentiMiss (PROGRESSIVO DEL DOCUMENTO PRESENTE IN MISSIONE)
+IDTESTA=IDTESTA
+IDRIGA=IDRIGA
+CODART=CODART
+QTACONSEG=QTACONSEG
+QTAPREZZOCONS=QTAPREZZOCONS
+RIGACHIUSA=RIGACHIUSA
+NRRIFPARTITA=NRRIFPARTITA
+CODUBICAZIONE=CODUBICAZIONE
+
+;Funzionalità Gestione Leggi Penna Su Missioni
+;VISUALIZZA=1 Visualizza i dati del Leggi Penna in uno spread
+;RAGGRUPPA=IDTESTA,IDRIGA,CODART,RIGACHIUSA,NRRIFPARTITA,CODUBICAZIONE (Campi con cui raggruppare le righe del Leggi Penna:IDTESTA,IDRIGA sono Obbligatori)
+;Il Raggruppa viene effettuato solo se IDTESTA=PROGRESSIVO DI TABTESTEMISSIONI e IDRIGA=PROGRESSDOC DI TabTesteDocumentiMiss (Leggi Penna del secondo Tipo legato all'agente:AGTLEGGIPENNAEMISSDOC_XPROGMISSDOC.AGT)
+[MISSIONI_PENNA]
+VISUALIZZA=0
+RAGGRUPPA=IDTESTA,IDRIGA,CODART,RIGACHIUSA,NRRIFPARTITA,CODUBICAZIONE
+;--------------------------------------------------
+
+[PACKINGLIST]
+;datafield standard per controllo packing list
+;Articolo		->	codice articolo
+;Quantita		->	quantità
+NomeDatabase=PACKINGLIST
+Articolo=Articolo
+Quantita=Quantita
+
+
+'------------------------------------------------------------------------------------------------------------------------
+'			FUNZIONE DI GESTIONE AUTOMATICA TERMINALI CON MEMORIA
+[AGENTI]
+Agente1=leggipenna.agt
+
+[SEZIONE DATI]
+Sezione1=GENERADOCUMENTI
+
+[GENERADOCUMENTI]
+NomeDatabase=GENERADOCUMENTI

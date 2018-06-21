@@ -1,0 +1,17 @@
+<transform>
+	<dataType>vartext</dataType> 
+	<separator>|</separator>
+	<descrRow>
+		<colTest id="1" value="" />
+		<colTest id="3" value="not blank" />
+		<colTest id="5" value="0" />
+		<skip>false</skip>
+	</descrRow>	
+	<colums>
+		<col id="1" mapid="2" index="1" type="text" /> 
+		<col id="2" mapid="11" index="2" type="decimal" /> 
+		<col id="3" mapid="7" index="3" type="text" /> 
+		<col id="4" mapid="6" index="4" type="date" />
+		<col id="5" mapid="-5" index="5" type="integer" />
+	</colums>
+</transform>

@@ -1,0 +1,32 @@
+// --------------------------------------------------------------------- //
+// Agente di cambio data movimentazione in riga lista di consuntivazione //
+// al cambio della data inizio risorsa                                   //
+// --------------------------------------------------------------------- //
+
+
+
+[VALUTA]
+
+#MODESCLUSIVA
+
+// Recupero posizione colonne date
+#LET V_Riga={$(RIGAATTIVA)}
+#RIFERIMENTOCOLONNA #ssRighe;3;V_PosDataMov
+#RIFERIMENTOCOLONNA #ssRighe;16;V_PosDataRis
+
+#IF {$(V_PosDataMov)}>0 & {$(V_PosDataRis)}>0
+
+	// Lettura delle due date
+	#FRMLEGGICELLA #ssRighe;{$(V_PosDataMov)};{$(V_Riga)};V_DataMov
+	#FRMLEGGICELLA #ssRighe;{$(V_PosDataRis)};{$(V_Riga)};V_DataRis
+
+	// Se le date sono differenti, aggiorna la data movimento
+	#IF $(V_DataMov)==$(V_DataRis)
+	#ELSE
+		#FRMSCRIVICELLA #ssRighe;{$(V_PosDataMov)};{$(V_Riga)};
+		#FRMSCRIVICELLA #ssRighe;{$(V_PosDataMov)};{$(V_Riga)};$(V_DataRis)
+	#ENDIF
+
+#ENDIF
+
+#FINEMODESCLUSIVA

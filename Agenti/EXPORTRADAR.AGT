@@ -1,0 +1,138 @@
+[VALUTA]
+#MODESCLUSIVA
+	#DBCONNETTI #0
+		#DBESEGUISQL #0;DELETE FROM MET_EXPORTRADAR
+		#DBAPRITAB #0;#1;SELECT * FROM MET_VISTA_EXPORTRADAR ORDER BY NOMEPIANIF,PROG_ID
+			#IF {$(FINETABELLA)}=1
+			#ELSE
+				#DBPRIMO #1
+				#DO
+					#DBLEGGICAMPOSTR #1;NOMEPIANIF;NOMEPIANIF
+					#DBLEGGICAMPOSTR #1;ORDINE;ORDINE
+					#DBLEGGICAMPO #1;PROG_ID;PROG_ID
+					#DBLEGGICAMPO #1;TIPO;TIPO
+					#DBESEGUISQL #0;EXEC MET_PROC_EXPORTRADAR '$(NOMEPIANIF)','$(ORDINE)',$(PROG_ID),$(TIPO)
+					#DBSUCCESSIVO #1
+				#LOOP {$(FINETABELLA)}=1
+			#ENDIF
+		#DBCHIUDITAB #1
+	#DBAPRITAB #0;#2;SELECT REPLACE(CONVERT(NVARCHAR(MAX), GETDATE(),120),':','.') AS DATA 
+		#DBLEGGICAMPOSTR #2;DATA;DATA
+	#DBCHIUDITAB #2
+	#DBDISCONNETTI #0
+	
+	//CARICO I DATI DI CONFIGURAZIONE PER IL FILE DA ESPORTARE
+	#CERCAFILE CONFIGPERS.INI;$(PERCORSOMETODO)\PERS\$(DITTAATTIVA);NOMEFILE
+	#IF $(NOMEFILE)==
+		#CERCAFILE CONFIGPERS.INI;$(PERCORSOMETODO)\PERS;NOMEFILE
+	#ENDIF
+	#LEGGIFILEINI $(NOMEFILE);EXPORTRADAR;FILEPATH;;FILEPATH
+	#LEGGIFILEINI $(NOMEFILE);EXPORTRADAR;FILE;;FILEEXPORT
+	#LEGGIFILEINI $(NOMEFILE);EXPORTRADAR;FOGLIO;;FOGLIOEXPORT
+
+	//ESPORTO NOMEPIANO
+	#SCRIPT VBSCRIPT
+		DIM STRFILE,  DATA
+		STRFILE = AGTVAR.ITEM("FILEPATH") & "01_" & AGTVAR.ITEM("FILEEXPORT") & " " & AGTVAR.ITEM("DATA") & ".csv"
+		DATA = AGTVAR.ITEM("DATA")
+		outputFile = STRFILE 
+		
+		dim fso
+		set fso = CreateObject("Scripting.FileSystemObject")
+		
+		STRQUERY = "SELECT ORDINE,ORDINA AS ORDINAMENTO,LIVELLO,PROG_ID,RIF_ID,RIFERIMENTI,RIFCOMMCLI,TIPO,CODART,DSCARTICOLO,UMBASE,QTABASE,DATARICH,CONFERMATO,DATAORD,DATACONS,NUOVADATA,CODCLIFOR,RAGIONESOCIALE,ECCEZIONI,CODPIANIFICATORE "
+		STRQUERY = STRQUERY & " FROM MET_VISTA_ORD_EXPORTRADAR where nomepianif in (SELECT PAR_VALORE FROM BCEA_PARAMETRITDA AS BP WHERE PAR_CODICE='NOMEPIANO')ORDER BY NOMEPIANIF,ORDINE,ORDINA" 
+		call MakeDataFile(outputFile,STRQUERY)
+
+		TimeoutMins = 30
+
+		set fso = nothing
+
+		sub MakeDataFile(fPath, sqlstr)
+			dim a, showList, intcount
+			set a = fso.createtextfile(fPath)
+			set showList = MXDB.dbcreass((HNDDBARCHIVI),sqlstr)
+
+			for intcount = 0 to MXDB.dbGetNumeroColonne((showList)) -1
+				if intcount <> MXDB.dbGetNumeroColonne((showList))-1 then
+					a.write "" & MXDB.dbGetNomeCampo((showList), 4, intcount) & ";"
+				else
+					a.write "" & MXDB.dbGetNomeCampo((showList), 4, intcount) & ""
+				end if
+			next
+			a.writeline ""
+
+			do until MXDB.DbFinetab((showlist))
+				for intcount = 0 to MXDB.dbGetNumeroColonne((showList)) - 1
+					if intcount <> MXDB.dbGetNumeroColonne((showList)) - 1 then
+						a.write "" & MXDB.dbGetCampo((showList), 4, MXDB.dbGetNomeCampo((showList), 4, intcount), Null) & ";"
+					else
+						a.write "" & MXDB.dbGetCampo((showList), 4, MXDB.dbGetNomeCampo((showList), 4, intcount), Null) & ""
+					end if
+				next
+				a.writeline ""
+				Call MXDB.DBSuccessivo((showList))
+			loop
+			
+			Call MXDB.DBChiudiSS((showList))
+			set showList = nothing
+			
+			Call a.close
+			set a = nothing
+		end sub
+	#ENDSCRIPT
+
+	//ESPORTO NOMEPIANO2	
+	#SCRIPT VBSCRIPT
+		DIM STRFILE,  DATA
+		STRFILE = AGTVAR.ITEM("FILEPATH") & "02_" & AGTVAR.ITEM("FILEEXPORT") & " " & AGTVAR.ITEM("DATA") & ".csv"
+		DATA = AGTVAR.ITEM("DATA")
+		outputFile = STRFILE 
+		
+		dim fso
+		set fso = CreateObject("Scripting.FileSystemObject")
+		
+		STRQUERY = "SELECT ORDINE,ORDINA AS ORDINAMENTO,LIVELLO,PROG_ID,RIF_ID,RIFERIMENTI,RIFCOMMCLI,TIPO,CODART,DSCARTICOLO,UMBASE,QTABASE,DATARICH,CONFERMATO,DATAORD,DATACONS,NUOVADATA,CODCLIFOR,RAGIONESOCIALE,ECCEZIONI,CODPIANIFICATORE "
+		STRQUERY = STRQUERY & " FROM MET_VISTA_ORD_EXPORTRADAR where nomepianif in (SELECT PAR_VALORE FROM BCEA_PARAMETRITDA AS BP WHERE PAR_CODICE='NOMEPIANO2')ORDER BY NOMEPIANIF,ORDINE,ORDINA" 
+		call MakeDataFile(outputFile,STRQUERY)
+
+		TimeoutMins = 30
+
+		set fso = nothing
+
+		sub MakeDataFile(fPath, sqlstr)
+			dim a, showList, intcount
+			set a = fso.createtextfile(fPath)
+			set showList = MXDB.dbcreass((HNDDBARCHIVI),sqlstr)
+
+			for intcount = 0 to MXDB.dbGetNumeroColonne((showList)) -1
+				if intcount <> MXDB.dbGetNumeroColonne((showList))-1 then
+					a.write "" & MXDB.dbGetNomeCampo((showList), 4, intcount) & ";"
+				else
+					a.write "" & MXDB.dbGetNomeCampo((showList), 4, intcount) & ""
+				end if
+			next
+			a.writeline ""
+
+			do until MXDB.DbFinetab((showlist))
+				for intcount = 0 to MXDB.dbGetNumeroColonne((showList)) - 1
+					if intcount <> MXDB.dbGetNumeroColonne((showList)) - 1 then
+						a.write "" & MXDB.dbGetCampo((showList), 4, MXDB.dbGetNomeCampo((showList), 4, intcount), Null) & ";"
+					else
+						a.write "" & MXDB.dbGetCampo((showList), 4, MXDB.dbGetNomeCampo((showList), 4, intcount), Null) & ""
+					end if
+				next
+				a.writeline ""
+				Call MXDB.DBSuccessivo((showList))
+			loop
+			
+			Call MXDB.DBChiudiSS((showList))
+			set showList = nothing
+			
+			Call a.close
+			set a = nothing
+		end sub
+	#ENDSCRIPT
+
+	#MESSAGGIO 0;PROCEDURA ESEGUITA!
+#FINEMODESCLUSIVA

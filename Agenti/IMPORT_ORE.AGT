@@ -1,0 +1,266 @@
+[VALUTA]
+#MOSTRAMSGSTATO Esecuzione in corso...
+#SCRIPT VBScript
+
+	'per prove in sede
+	'const pathCaricamento = "D:\IMPORT\FILES"
+	'const pathStoricizzazione = "D:\IMPORT\STORICO"
+	'Server = "TOP64-SRV"
+	'Database = "BREVCEA"
+
+	'Operativo in Brevetti CEA
+	const pathCaricamento = "M:\ORE_TRASFERTE"
+	const pathStoricizzazione = "M:\ORE_TRASFERTE\FILE_ELABORATI"
+	Server = "SRVERP01"
+	Database = "BRECEA"
+	
+	'Inizializza le costanti
+	const GD_INSERIMENTO=0
+	const CODART=2
+	const UMGEST=7
+	const UMPREZZO=8
+	const NUMLISTINO=5
+	const DATACONSEGNA=6
+	const QTAGEST=11
+	const PREZZOUNITLORDO=17
+	const RIFCOMMCLI=38
+	const CONTOCDCMOV=60
+	const TipoDoc="HDP"
+	
+	UtenteLavoro = "sa"
+	PwdUtenteLavoro = "sqlmetodo"
+
+	DSN = "driver={SQL Server};database=" & Database & ";server=" & Server & ";uid=" & UtenteLavoro & ";pwd=" & PwdUtenteLavoro
+	Set dbconn = CreateObject("ADODB.connection")
+	dbconn.ConnectionString = DSN
+	dbconn.CursorLocation = 2 'adUseServer
+	dbconn.Mode = 3
+	dbconn.open
+
+	'Pulisco la teblla personalizzata
+	metSQL = "DELETE FROM MET_IMPORTORE"
+	dbconn.execute metSQL
+	
+	'Elimino la tabella importata da EXCEL
+	metSQL = "IF EXISTS (SELECT 1 FROM SYSOBJECTS WHERE ID = OBJECT_ID('XLImportORE') AND TYPE = 'U') DROP TABLE XLImportORE"
+	dbconn.execute metSQL
+
+	'Inizializza gli oggetti
+	set fso = CreateObject("Scripting.FileSystemObject")
+	Set MXGD = MXAA.GETAMBIENTE("MXGD")
+	Set MXCREP = MXAA.GetAmbiente("MXCREP")
+	Set MXFT = MXAA.GetAmbiente("MXFT")
+	
+	'Apre un file di LOG
+	strLogFile = MXNU.GetTempFile()
+	call MXNU.ImpostaErroriSuLog((strLogFile), True)	
+
+	'Ottiene le due cartella da cui leggere
+	Set folderCaricamento = fso.GetFolder(pathCaricamento)
+
+	'Cicla tutti i file EXCEL
+	filesCount=0
+	Errore=false
+
+		For Each f In folderCaricamento.Files
+			If UCase(Right(f.Name, 3)) = "XLS" Then
+				'Comincia a scriver nel LOG
+				Call MXNU.MsgBoxEX("Importazione dati da file " & f.path, vbCritical, 1007)
+
+				'Faccio la connessione al file Excel
+				Set cn = CreateObject("ADODB.Connection")
+				cn.open "Provider=Microsoft.Jet.OLEDB.4.0;" & _
+					"Data Source=" & f.path & ";" & _
+					"Extended Properties=Excel 8.0"
+
+				'Importo i dati di Excel in una Tabella temporanea di SQL
+				strSQL = "SELECT * INTO [odbc;Driver={SQL Server};" & _
+					"Server=" & Server & ";Database=" & Database & ";" & _
+					"UID=" & UtenteLavoro & ";PWD=" & PwdUtenteLavoro & "].XLImportORE " & _
+					"FROM [Database]"
+				cn.execute strSQL 
+
+				Data = Date()
+				Anno = AGTVAR.Item("Annoattivo")
+
+				'Importo i dati appena letti nella tabella SQL
+				metSQL = "SET DATEFORMAT DMY INSERT INTO MET_IMPORTORE(TIPODOC,ESERCIZIO,DATADOC,CODFOR,ARTICOLO,QTA,PREZZO,RIFCOMM,DATACONS,CCOSTO,UTENTEMODIFICA,DATAMODIFICA) " & _
+						"(SELECT '" & TipoDoc & "'," & Anno & " ,'" & Data & "' ,'F   131',ARTICOLO,ORE,0,ISNULL(COMMESSA,''),DATA,'','IMPORT',GETDATE() FROM XLImportORE WHERE ORE<>0)"
+				dbconn.execute metSQL
+
+				'Elimino la tabella importata da EXCEL
+				metSQL = "IF EXISTS (SELECT 1 FROM SYSOBJECTS WHERE ID = OBJECT_ID('XLImportORE') AND TYPE = 'U') DROP TABLE XLImportORE"
+				dbconn.execute metSQL
+
+				If Not fso.FolderExists(pathStoricizzazione) Then
+					Call fso.CreateFolder(pathStoricizzazione)
+				End If
+				cn.Close
+				
+				Call fso.CopyFile(F.path, pathStoricizzazione & "\" & F.Name, True)
+				Call fso.DeleteFile(F.path, True)
+				'Call fso.MoveFile(f.path, pathStoricizzazione & "\" & f.name)
+
+				filesCount=filesCount+1
+			End If	
+		Next 
+	
+'Aggiorno la tabella appena importata con il codice Centro di Costo e Prezzo associati all'articolo
+metSQL = "UPDATE MET_IMPORTORE SET PREZZO=MET_VISTAARTICOLICDC_ORE.VALORE,CCOSTO=MET_VISTAARTICOLICDC_ORE.CODCATEGORIASTAT FROM MET_IMPORTORE " & _
+		" INNER JOIN MET_VISTAARTICOLICDC_ORE ON MET_IMPORTORE.ARTICOLO=MET_VISTAARTICOLICDC_ORE.CODICE"
+dbconn.execute metSQL
+
+'f.Close
+Set f = Nothing
+Set folderCaricamento = Nothing
+Set fso = Nothing
+DBConn.Close
+Set DBConn = Nothing
+
+'Genero il Documento dalla tabella importata
+	'Scrivo i dati del documenti in un file di log
+	strLogFileName="M:\ORE_TRASFERTE\LOG.TXT"
+	'strLogFileName="d:\IMPORT\LOG.TXT"
+	Const ForAppending = 8
+	Set fs = CreateObject("Scripting.FileSystemObject")
+	If fs.FileExists(strLogFileName) Then
+		set file = fs.OpenTextFile(strLogFileName, ForAppending) 
+	Else
+		Set file = fs.CreateTextFile(strLogFileName)
+	End If
+	
+	Set DbConn = CreateObject("ADODB.Connection")
+	DbConn.Open "Provider=sqloledb;Data Source=" & Server & ";Initial Catalog=" & Database & ";User ID=trm151;Password=terminale"
+
+	Set rsPrev = DbConn.Execute("SELECT CODFOR,ESERCIZIO,TIPODOC,DATADOC FROM MET_IMPORTORE GROUP BY CODFOR,ESERCIZIO,TIPODOC,DATADOC")
+
+	'strLogFile = MXNU.GetTempFile()
+	Call MXNU.ImpostaErroriSuLog("M:\ORE_TRASFERTE\Errori.txt", True)
+	'Call MXNU.ImpostaErroriSuLog("d:\IMPORT\Errori.txt", True)
+	'msgbox cstr(mxnu.CHMessaggi)
+
+	If rsPrev.EOF Then
+		'Avviso se non ci sono dati nella tabella
+		MsgBox "Nessun documento da importare",48,"Generazione Documenti"
+	Else
+		'Leggo elenco dei documenti da importare
+		Dim NP()
+		Dim EsDoc()
+		Dim TipoD()
+		Dim DtDoc()
+		Dim CC()
+		i=0
+		While Not(rsPrev.EOF)   
+			Redim Preserve NP(i)
+			Redim Preserve EsDoc(i)
+			Redim Preserve TipoD(i)
+			Redim Preserve DtDoc(i)
+			Redim Preserve CC(i)
+			NP(i) = rsPrev.Fields("TIPODOC").Value
+			EsDoc(i) = rsPrev.Fields("ESERCIZIO").Value
+			TipoD(i) = rsPrev.Fields("TIPODOC").Value
+			DtDoc(i) = rsPrev.Fields("DATADOC").Value
+			CC(i) = rsPrev.Fields("CODFOR").Value
+			rsPrev.MoveNext
+			i = i + 1
+		WEnd
+		rsPrev.Close
+		Set rsPrev = Nothing
+
+		For i=LBound(NP) to UBound(NP)
+			'Elaboro il documento corrente per il cliente corrente
+			EDoc = EsDoc(i)
+			Tdoc = TipoD(i)
+			DDoc = DtDoc(i)
+			nPrev = NP(i)
+			CodCliente = CC(i)
+
+			'Genero il documento in Metodo
+			Set rs=DbConn.Execute("SELECT * FROM MET_IMPORTORE WHERE TIPODOC='" & nPrev & "'")
+			'inizializzo oggetto gestione documenti
+			'MXGD c gir inizializzato
+			Set MXGD = MXAA.GetAmbiente("MXGD")
+
+			'apro nuovo documento con n_prev corrente
+			Set mCGestDoc = MXGD.CreaCGestDoc(Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+			'vado in inserimento di un nuovo documento
+			mCGestDoc.Stato = 0
+			'costruzione testa documento
+			Call mCGestDoc.xTDoc.AssegnaCampo("TIPODOC", Tdoc)
+			Call mCGestDoc.xTDoc.AssegnaCampo("ESERCIZIO", EDoc)
+			Call mCGestDoc.xTDoc.AssegnaCampo("DATADOC", DDoc)
+			Call mCGestDoc.xTDoc.AssegnaCampo("CODCLIFOR", CodCliente)
+
+			ProgRiga = 0
+			While Not(rs.EOF)
+		
+				'inserisco le righe nel documento corrente
+				ProgRiga = ProgRiga+1
+				mCGestDoc.RigaAttiva.RigaCorr = ProgRiga
+			
+				'Controllo se il codice articolo non c presente, cose lo setto a vuoto e imposto la riga come riga descrittiva
+				If trim(rs.Fields("ARTICOLO").Value)="" Then
+					mCGestDoc.RigaAttiva.ValoreCampo(1) = "D"
+					mCGestDoc.RigaAttiva.ValoreCampo(4) = rs.Fields("DESCRIZIONEART").Value
+				Else
+					mCGestDoc.RigaAttiva.ValoreCampo(2) = rs.Fields("ARTICOLO").Value
+					mCGestDoc.RigaAttiva.ValoreCampo(6) = rs.Fields("DATACONS").Value
+					If CDbl(rs.Fields("QTA").Value)=0 Then
+						mCGestDoc.RigaAttiva.ValoreCampo(11) = 1
+					Else
+						mCGestDoc.RigaAttiva.ValoreCampo(11) = CDbl(rs.Fields("QTA").Value)
+					End If
+					mCGestDoc.RigaAttiva.ValoreCampo(17) = CDbl(rs.Fields("PREZZO").Value)
+					If trim(rs.Fields("RIFCOMM").Value)<>"" Then
+						mCGestDoc.RigaAttiva.ValoreCampo(82) = rs.Fields("RIFCOMM").Value
+					End If
+					If trim(rs.Fields("CCOSTO").Value)<>"" Then
+						mCGestDoc.RigaAttiva.ValoreCampo(60) = rs.Fields("CCOSTO").Value
+					End If
+
+				End If				
+				rs.MoveNext
+			Wend		
+
+			Call mCGestDoc.Calcolo_Totali
+
+			'registrazione documento
+			intNewEsercizio = clng(mCGestDoc.xTDoc.GrInput("ESERCIZIO").ValoreCorrente)
+			lngNewNrDoc = clng(mCGestDoc.xTDoc.GrInput("NUMERODOC").ValoreCorrente)
+			strNewBis = " "
+
+			If mCGestDoc.Salva(intNewEsercizio, lngNewNrDoc, strNewBis) Then
+				'DbConn.Execute("UPDATE MET_VISTARIGHEDOCDACREARE SET IMPORTATO=1 WHERE CODDOC='" & nPrev & "'")
+				strMessaggioLog="Generato documento | " & EDoc & " | " & Tdoc & " | " & lngNewNrDoc & " | " & Nrif & " | " & DDoc & " | " & CodCliente & " | " & now()
+				'Call file.WriteLine(strMessaggioLog)
+				Call MXNU.MsgBoxEX(strMessaggioLog, 64,"")
+			Else
+				Call MXNU.MsgBoxEX("Errore nella generazione del documento | " & EDoc & " | " & Tdoc & " | " & lngNewNrDoc & " | " & Nrif & " | " & DDoc & " | " & CodCliente & " | " & now(), 64,"")
+			End If
+
+			'termino oggetto gestione documenti
+			If Not mCGestDoc Is Nothing Then 
+				Call mCGestDoc.Termina
+				Set mCGestDoc = Nothing
+			End If
+
+			rs.Close
+			Set rs = Nothing
+
+		Next
+	End If
+
+	Call MXNU.ChiudiErroriSuLog
+	DBConn.Close
+	Set DBConn = Nothing
+	
+	'Chiudo file di log
+	file.Close
+	Set file = nothing
+	Set fs = nothing
+
+'Fine generazione Documento
+
+MsgBox "Fine Elaborazione!"
+#ENDSCRIPT
+#CANCELLAMSGSTATO

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metodo xmlns="x-schema:metodo.xdr">
+    <valid name="VALID_ANAGCLI">
+        <console name="Customer" description="Situazione Cliente" />
+        <console name="CustomerOutlook" description="Situazione Cliente con Outlook" />
+    </valid>
+    <valid name="VALID_CFG">
+        <console name="Customer" description="Situazione Cliente" />
+        <console name="CustomerOutlook" description="Situazione Cliente con Outlook" />
+    </valid>
+    <valid name="VALID_CLI">
+        <console name="Customer" description="Situazione Cliente" />
+        <console name="CustomerOutlook" description="Situazione Cliente con Outlook" />
+    </valid>
+    <valid name="VALID_CF">
+        <console name="Customer" description="Situazione Cliente" />
+        <console name="CustomerOutlook" description="Situazione Cliente con Outlook" />
+        <console name="promozioni" description="Elenco promozioni" />
+    </valid>
+    <valid name="VALID_CF_GD">
+        <console name="Customer" description="Situazione Cliente" />
+        <console name="CustomerOutlook" description="Situazione Cliente con Outlook" />
+    </valid>
+    <valid name="VALID_ARTICOLOANAG">
+				<console name="BCEACostiArt" description="Inter. e Manut. Costi"/>
+        <console name="stock1" description="Situazione Articolo Completa" />
+        <console name="simart1" description="Simulazione Approvvigionamenti" />
+        <console name="mquad1" description="Previsione Vendite" />
+        <console name="graficoofn" description="Grafico" />
+        <console name="graficoofnprev" description="Grafico Stagion" />
+    </valid>
+    <valid name="VALID_ARTICOLO">
+				<console name="BCEACostiArt" description="Inter. e Manut. Costi"/>
+        <console name="stock1" description="Situazione Articolo Completa" />
+        <console name="simart1" description="Simulazione Approvvigionamenti" />
+        <console name="mquad1" description="Previsione Vendite" />
+        <console name="graficoofn" description="Grafico" />
+        <console name="graficoofnprev" description="Grafico Stagion" />
+    </valid>
+</metodo>

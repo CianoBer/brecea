@@ -1,0 +1,453 @@
+<controlli>
+	<toolbox/>
+	<consolle>
+		<commandbar nomecmdBarOrigine="CommandBars" nomecmd="Standard" image="ImageManager">
+			<pulsante testo="Selezione" img="%EMBPATHSRV%\images\selezione.ico" id="2" idPannello="4">
+				<controllo progid="DdtImporter.ucDdtImporter" intestazione="Selezione" loaded="1" hwnd="1577024" icona="%EMBPATHSRV%\images\selezione.bmp" nome="Obj_2" isCDN="0" widthCDN="0" heightCDN="0" GraphTop="258,263333333333" GraphLeft="56" ToolTip="Selezione" Priority="0" HCID="0" SerializedContent="" IniH="0" IniW="0" Position="" Of="">
+					<metodi>
+						<metodo nome="SuCaricamentoXml">
+							<params/>
+							<vbcode><![CDATA[on error resume next
+							
+Call Obj_3.ResetFogli()
+on error goto 0
+
+]]></vbcode>
+						</metodo>
+						<metodo nome="SuEstrazioneProposte">
+							<params/>
+							<vbcode><![CDATA[on error resume next
+if (not Obj_3 is nothing) then
+Call Obj_3.AzzeraRigheOrdini()
+Obj_3.DF_RigheOrdini = Obj_2.DF_RigheOrdini
+Call Obj_3.AggiornaGrigliaProposte()
+end if
+on error goto 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></vbcode>
+						</metodo>
+						<metodo nome="SuEstrazioneParametri">
+							<params/>
+							<vbcode><![CDATA[on error resume next
+if (not Obj_3 is nothing) then
+Obj_3.DF_tipologiePrelievo = Obj_2.DF_tipologiePrelievo
+Obj_3.DF_policy = Obj_2.DF_policy
+Obj_3.DF_tipoDocumentoGenerato = Obj_2.DF_tipoDocumentoGenerato
+Obj_3.DF_RigheOrdini = Obj_2.DF_RigheOrdini
+Obj_3.DF_residuiOrdine = Obj_2.DF_residuiOrdine
+Obj_3.DF_chiudiNonSaturati = Obj_2.DF_chiudiNonSaturati
+end if
+
+if (not Obj_5 is nothing) then
+Obj_5.DF_percorsoXml=Obj_2.DF_percorsoXml
+end if
+
+if (not Obj_4 is nothing) then
+Obj_4.DF_MFileConfig=Obj_2.DF_MFileConfig
+Call Obj_4.AggiornaDatiCfg(Obj_2.DF_percorsoXml,Obj_2.DF_tipologiePrelievo,Obj_2.DF_tipoDocumentoGenerato,Obj_2.DF_policy,Obj_2.DF_field,Obj_2.DF_residuiOrdine,Obj_2.DF_chiudiNonSaturati,Obj_2.DF_postAction,Obj_2.DF_percorsoPdf)
+end if
+on error goto 0
+
+
+
+
+
+
+
+]]></vbcode>
+						</metodo>
+						<metodo nome="SuCaricaOrdiniArticoli">
+							<params/>
+							<vbcode><![CDATA[on error resume next
+if (not Obj_3 is nothing ) then
+Obj_3.DF_Articoli = Obj_2.DF_Articoli
+Obj_3.DF_percorsoFileInLavorazione=Obj_2.DF_percorsoFileInLavorazione
+end if
+on error goto 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></vbcode>
+						</metodo>
+						<metodo nome="SuEstrazioneArchiviati">
+							<params>
+								<param>Colonna</param>
+								<param>Riga</param>
+								<param>Valore</param>
+							</params>
+							<vbcode><![CDATA[on error resume next
+if (not Obj_5 is nothing) then
+Call Obj_5.ImpostaRiga(Colonna,Riga,Valore)
+end if
+on error goto 0
+
+
+
+
+
+
+]]></vbcode>
+						</metodo>
+						<metodo nome="SuAggiornaFileXml">
+							<params/>
+							<vbcode><![CDATA[on error resume next
+Call Obj_5.PulisciImportati()
+on error goto 0
+
+
+
+
+]]></vbcode>
+						</metodo>
+					</metodi>
+					<proprieta>
+						<prop nome="DF_Articoli" descrizione="Articoli" tipo="Object" valore=""/>
+						<prop nome="DF_percorsoFileInLavorazione" descrizione="Percorso del file in lavorazione" tipo="Stringa" valore=""/>
+						<prop nome="DF_percorsoXml" descrizione="percorso xml" tipo="Stringa" valore=""/>
+						<prop nome="DF_RigheOrdini" descrizione="Righe Ordini" tipo="Object" valore=""/>
+						<prop nome="DF_MFileConfig" descrizione="MFileConfig" tipo="Stringa" valore=""/>
+					</proprieta>
+				</controllo>
+			</pulsante>
+			<pulsante testo="Operazioni" img="%EMBPATHSRV%\images\operazioni.ico" id="3" idPannello="3">
+				<controllo progid="DdtImporter.ucDdtImporterOperazioni" intestazione="Operazioni" loaded="1" hwnd="332706" icona="%EMBPATHSRV%\images\operazioni.bmp" nome="Obj_3" isCDN="0" widthCDN="0" heightCDN="0" GraphTop="437,263333333333" GraphLeft="166" ToolTip="Operazioni" Priority="1" HCID="0" SerializedContent="" IniH="0" IniW="0" Position="" Of="">
+					<metodi>
+						<metodo nome="SuEstrazioneProposte">
+							<params/>
+							<vbcode><![CDATA[on error resume next
+if (not Obj_2 is nothing) then
+Call Obj_2.EstraiProposte()
+Obj_3.DF_RigheOrdini = Obj_2.DF_RigheOrdini
+end if
+on error goto 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></vbcode>
+						</metodo>
+						<metodo nome="SuDopoImportaProposta">
+							<params/>
+							<vbcode><![CDATA[on error resume next
+if (not Obj_2 is nothing) then
+'Call Obj_2.DoPostAction(Obj_2.DF_percorsoFileInLavorazione,Obj_4.PercorsoDestinazione,Obj_4.PostActionValue)
+Call Obj_2.EstraiArchiviati()
+Call Obj_2.AggiornaFileXml()
+end if
+on error goto 0
+
+
+
+
+
+]]></vbcode>
+						</metodo>
+						<metodo nome="SuRecuperoParametri">
+							<params/>
+							<vbcode><![CDATA[on error resume next
+if (not Obj_2 is nothing) then
+Obj_3.DF_tipologiePrelievo = Obj_2.DF_tipologiePrelievo
+Obj_3.DF_policy = Obj_2.DF_policy
+Obj_3.DF_tipoDocumentoGenerato = Obj_2.DF_tipoDocumentoGenerato
+Obj_3.DF_RigheOrdini = Obj_2.DF_RigheOrdini
+Obj_3.DF_residuiOrdine = Obj_2.DF_residuiOrdine
+Obj_3.DF_chiudiNonSaturati = Obj_2.DF_chiudiNonSaturati
+Obj_3.DF_Articoli = Obj_2.DF_Articoli
+Obj_3.DF_CodCliFor=Obj_2.DF_CodCliFor
+end if
+on error goto 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></vbcode>
+						</metodo>
+						<metodo nome="SuPrimaGeneraDoc">
+							<params/>
+							<vbcode><![CDATA[on error resume next
+Obj_3.DF_CodCliFor=Obj_2.DF_CodCliFor
+Obj_3.DF_percorsoFileInLavorazione=Obj_2.DF_percorsoFileInLavorazione
+on error goto 0
+
+
+
+]]></vbcode>
+						</metodo>
+					</metodi>
+					<proprieta>
+						<prop nome="DF_CodCliFor" descrizione="CodCliFor" tipo="Stringa" valore=""/>
+						<prop nome="DF_percorsoFileInLavorazione" descrizione="Percorso del File in lavorazione" tipo="Stringa" valore=""/>
+					</proprieta>
+				</controllo>
+			</pulsante>
+			<pulsante testo="Configurazione" img="%EMBPATHSRV%\images\configurazione.ico" id="4" idPannello="1">
+				<controllo progid="DdtImporter.ucDdtImporterConfig" intestazione="Configurazione" loaded="1" hwnd="594430" icona="%EMBPATHSRV%\images\configurazione.bmp" nome="Obj_4" isCDN="0" widthCDN="0" heightCDN="0" GraphTop="367,263333333333" GraphLeft="373" ToolTip="Configurazione" Priority="2" HCID="0" SerializedContent="" IniH="0" IniW="0" Position="" Of="">
+					<metodi>
+						<metodo nome="SuImpostazioneDestinazione">
+							<params>
+								<param>destinazione</param>
+							</params>
+							<vbcode><![CDATA[on error resume next
+if (not Obj_5 is nothing ) then
+Call Obj_5.ImpostaPercorsoDestinazione(destinazione)
+end if
+on error goto 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></vbcode>
+						</metodo>
+						<metodo nome="SuRecuperoParametri">
+							<params/>
+							<vbcode><![CDATA[on error resume next
+if (not Obj_2 is nothing) then
+Obj_4.DF_MFileConfig=Obj_2.DF_MFileConfig
+Call Obj_4.AggiornaDatiCfg(Obj_2.DF_percorsoXml,Obj_2.DF_tipologiePrelievo,Obj_2.DF_tipoDocumentoGenerato,Obj_2.DF_policy,Obj_2.DF_field,Obj_2.DF_residuiOrdine,Obj_2.DF_chiudiNonSaturati,Obj_2.DF_postAction,Obj_2.DF_percorsoPdf)
+end if
+on error goto 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></vbcode>
+						</metodo>
+						<metodo nome="SuSalvataggioParametri">
+							<params>
+								<param>percorsoXml</param>
+								<param>tipologiePrelievo</param>
+								<param>policy</param>
+								<param>field</param>
+								<param>tipoDocumentoGenerato</param>
+								<param>residuiOrdine</param>
+								<param>chiudiNonSaturati</param>
+								<param>postAction</param>
+								<param>postActionPath</param>
+								<param>percorsoPdf</param>
+							</params>
+							<vbcode><![CDATA[
+
+Call Obj_2.RisettaParametri(percorsoXml,tipologiePrelievo,policy,field,tipoDocumentoGenerato,residuiOrdine,chiudiNonSaturati,postAction,postActionPath,percorsoPdf)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></vbcode>
+						</metodo>
+					</metodi>
+					<proprieta/>
+				</controllo>
+			</pulsante>
+			<pulsante testo="Archiviati" img="%EMBPATHSRV%\images\archiviati.ico" id="5" idPannello="2">
+				<controllo progid="DdtImporter.ucDdtImporterArchivi" intestazione="Archiviati" loaded="1" hwnd="1313168" icona="%EMBPATHSRV%\images\archiviati.bmp" nome="Obj_5" isCDN="0" widthCDN="0" heightCDN="0" GraphTop="254,263333333333" GraphLeft="498" ToolTip="Archiviati" Priority="3" HCID="0" SerializedContent="" IniH="0" IniW="0" Position="" Of="">
+					<metodi>
+						<metodo nome="SuEstrazioneArchiviati">
+							<params/>
+							<vbcode><![CDATA[on error resume next
+if ( not Obj_2 is nothing) then
+Call Obj_2.EstraiArchiviati()
+Call Obj_2.AggiornaFileXml()
+end if
+on error goto 0
+
+
+
+
+
+]]></vbcode>
+						</metodo>
+						<metodo nome="SuRecuperoParametri">
+							<params/>
+							<vbcode><![CDATA[on error resume next
+if (not Obj_2 is nothing) then
+Obj_5.DF_percorsoXml=Obj_2.DF_percorsoXml
+end if
+on error goto 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></vbcode>
+						</metodo>
+						<metodo nome="SuDopoCaricamento">
+							<params/>
+							<vbcode><![CDATA[on error resume next
+Call Obj_2.EstraiArchiviati()
+on error goto 0
+
+
+
+]]></vbcode>
+						</metodo>
+					</metodi>
+					<proprieta/>
+				</controllo>
+			</pulsante>
+		</commandbar>
+	</consolle>
+</controlli>

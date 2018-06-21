@@ -1,0 +1,74 @@
+//--------------------------------------------------------------- //
+// Esportazione consuntivo commesse clienti classificato in Excel //
+//--------------------------------------------------------------- //
+
+
+
+[VALUTA]
+
+// Apertura filtro
+#STAMPA ExpConsCCli;1;6000001
+#LETS V_Where=$(PARAMETRO)
+#IF $(V_Where)== | $(V_File)==
+#ELSE
+	#SCRIPT VBScript
+
+		Dim strWhere, strFile
+		Dim objFS, strDirFile, strNomeFile
+		Dim objExc, strFoglio
+		Dim strConnMet, strQuery
+
+		' Recupero variabili passate dall'agente
+		strWhere = AGTVAR.Item("V_Where")
+		strFile = Trim(AGTVAR.Item("V_File"))
+
+		' Impostazione oggetto FileSystem
+		Set objFS = CreateObject("Scripting.FileSystemObject")
+
+		' Verifica correttezza percorso file
+		If Not objFS Is Nothing Then
+			strDirFile = Left(strFile, InstrRev(strFile, "\", -1, 1))
+			strNomeFile = Trim(Right(strFile, Len(strFile) - Len(strDirFile)))
+			If strNomeFile = "" Then
+				MsgBox "Nome file non indicato!" & Chr(13) & "Impossibile continuare!", 48, "ATTENZIONE!"
+			ElseIf objFS.FolderExists(strDirFile) Then
+
+				' Indicazione elaborazione su barra di stato
+				Call MXNU.MostraMsgInfo(1409)
+
+				' Impostazione file da creare
+				Set objExc = CreateObject("ADODB.Connection")
+				If Not objExc Is Nothing Then
+					Call objExc.Open("Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" & strFile & ";Extended Properties=Excel 8.0")
+					strFoglio = CStr(Now)
+
+					'Impostazione tabella di lettura dati da Metodo
+					strConnMet = "[odbc;" & MXNU.GetstrConnection(MXNU.DittaAttiva) & ";uid=" & MXNU.UtenteDB & ";pwd=" & MXNU.PasswordDB & "]"
+
+					' Esportazione tabella temporanea in file excel
+					strQuery = "SELECT RifComm AS [Commesa], DesCosto AS [Categoria Voce], VoceBase AS [Voce], DesVoce AS [Descrizione Voce],"
+					strQuery = strQuery & " TotOre AS [Qtà Eff], UMEff AS [UM Eff], Consumato AS [Effettivo], '' AS [Qtà Budget], '' AS [UM Budget], 0 AS [Budget]"
+					strQuery = strQuery & " INTO [" & strFoglio & "] FROM " & strConnMet & ".BCEA_VistaConsCCliExcel2"
+					strQuery = strQuery & " WHERE " & strWhere & " ORDER BY RifComm, Tipo, VoceBase"
+					Call objExc.Execute(strQuery)
+				End If
+
+				' Pulitura barra di stato e messaggio di chiusura
+				Call MXNU.MostraMsgInfo(0)
+				MsgBox "Elaborazione Terminata!", 64, "Export Cons. Comm. Cli. in Excel"
+			Else
+				MsgBox "Cartella [" & strDirFile & "] non valida!" & Chr(13) & "Impossibile continuare!", 48, "ATTENZIONE!"
+			End If
+		Else
+			MsgBox "Impossibile inizializzare l'oggetto FileSystem!", 16, "ATTENZIONE!"
+		End If
+
+		' Chiusura oggetti
+		On Error Resume Next
+		Call objExc.Close
+		On Error GoTo 0
+		Set objExc = Nothing
+		Set objFS = Nothing
+
+	#ENDSCRIPT
+#ENDIF

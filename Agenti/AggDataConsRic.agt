@@ -1,0 +1,288 @@
+//Agente Calcola data Consegna in uscita dalla cella q.tà
+//Attivo per il tipo riga 102
+//PROGRESSIVI QUERY APERTE
+//1 - ANAGARFICAARTICOLI PER CONTROLLO PROVVENIENZA E LEAD TIME ARTICOLO.
+//2 - CALCOLO DISPONIBILITA' ARTICOLO.
+//3 - CALCOLO DATA CONSEGNA DA CALENDARIO AZIENDALE.
+//4 - RECUPERO VINCOLI GENERALI DI PIANIFICAZIONE.
+//5 - VERIFICA NUOVA RIGA
+//
+//PROGRESSIVI CONNESSIONI
+//0 - CONNESSIONE PREDEFINITA
+
+// implementazioni del 15/06/2018
+// controllo Q.tà Minima Consentita
+
+
+
+[VALUTA]
+
+#MODESCLUSIVA
+
+#CHR 13;cr
+#CHR 32;b
+#CHR 44;v
+#CHR 45;TRATTINO
+
+#TITOLOFINESTRA TITOLOFINESTRA
+
+// Recupero dati testadocumento
+#FRMLEGGICAMPOSTR #txtb_0;V_Doc
+#FRMLEGGICAMPOSTR #mskedt_0;DATADOC
+#FRMLEGGICAMPO #txtb_1;V_Esercizio
+#FRMLEGGICAMPO #txtb_4;V_NumeroDoc
+#FRMLEGGICAMPOSTR #txtb_19;V_Bis
+
+
+// Recupero file configurazione
+#CERCAFILE ConfigPers.ini;$(PERCORSOMETODO)\Pers\$(DITTAATTIVA);V_File
+#IF $(V_File)==
+	#CERCAFILE ConfigPers.ini;$(PERCORSOMETODO)\Pers;V_File
+#ENDIF
+
+// Verifica se documento soggetto a calcolo data
+#LEGGIFILEINI $(V_File);CALCOLODATACONSRIC;TipiDoc;;V_ElencoDoc
+#TRIM V_ElencoDoc;V_ElencoDoc;T
+#LET V_Calcola=0
+#IF NOT($(V_ElencoDoc)==)
+	#LET V_Cont=0
+	#DO
+		#IF $(V_ElencoDoc:$(V_Cont))==$(V_Doc)
+			#LET V_Calcola=1
+		#ENDIF
+		#EXIT $(V_ElencoDoc:$(V_Cont))==$(V_Doc)
+
+		#LET V_Cont={$(V_Cont)+1}
+	#LOOP $(V_ElencoDoc:$(V_Cont))==
+#ENDIF
+
+// Calcola data consegna
+#IF {$(V_Calcola)}=0
+#ELSE
+	// Il calcolo scatta solo in inserimento documenti
+	
+	//Modifica del 04/06/2009 RGabriele - l'agente va fatto partire sempre
+	//#IF $(TITOLOFINESTRA)==Modifica Documenti 
+	//#ELSE
+	
+		//Verifico se la riga è nuova o se sono in modifica.
+		#LET V_IdRiga=0
+		#script vbscript
+			Dim vbColl
+			Dim objDoc
+			Dim idriga
+			Dim idtesta
+
+			set vbColl = VBCOLLECTION
+			' Carico la collection delle strutture disponibili nella form dei doc.
+			call MXNU.FrmMetodo.FormAttiva.AzioniMetodo(13,(vbColl))
+			' Attuale documento
+			set objDoc = vbColl(6)
+			
+			idriga=cstr(objDoc.RigaAttiva.IDRiga)
+
+			On Error Resume Next
+			AGTVAR.Remove "V_Idriga"
+			AGTVARNOME.Remove "V_Idriga"
+			
+			On Error Goto 0
+			
+			AGTVAR.Add idriga, "V_Idriga"
+			AGTVARNOME.Add "V_Idriga", "V_Idriga"
+						
+			set objDoc = nothing
+			set vbColl = nothing
+		#endscript
+		
+		#DBCONNETTI #0
+		#LETS SQLVER=SELECT IDRIGA FROM RIGHEDOCUMENTI WHERE ESERCIZIO=$(V_Esercizio) AND TIPODOC = '$(V_Doc)'\
+					 $(b)AND NUMERODOC=$(V_NumeroDoc) AND BIS = '$(V_Bis)' AND IDRIGA=$(V_Idriga)
+		
+		#DBAPRITAB #0;#5;$(SQLVER)
+		#IF $(FINETABELLA)=1 //solo su nuove righe
+			
+			#RIFERIMENTOCOLONNA #ssrighe; 2; PCCODART
+			#RIFERIMENTOCOLONNA #ssrighe; 11; PCQTAGEST
+			#FRMLEGGICELLA #ssrighe;$(PCCODART);$(RIGAATTIVA);CODART
+			#FRMLEGGICELLA #ssrighe;$(PCQTAGEST);$(RIGAATTIVA);QTAGEST
+
+			#RIFERIMENTOCOLONNA #ssrighe; 62; PCDEPOSITO
+			#FRMLEGGICELLA #ssrighe;$(PCDEPOSITO);$(RIGAATTIVA);CODDEPOSITO
+			
+			
+			// 15/06/2018
+			#MOSTRAMSGSTATO Verifica Q.tà Minima Consentita...
+			#DBAPRITAB #0;#6;SELECT QTAMINCONS FROM ANAGRAFICAARTICOLICOMM WHERE CODICEART='$(CODART)' AND ESERCIZIO=$(V_Esercizio)
+				#DBLEGGICAMPO #6;QTAMINCONS;QTAMINCONS
+				#IF $(QTAMINCONS) > 0 
+					#IF $(QTAGEST) < $(QTAMINCONS)
+						#MESSAGGIO 0;Attenzione! Quantità imputata [$(QTAGEST)] minore della quantità minima consentita [$(QTAMINCONS)] $(cr) $(cr) La quantità verrà reimpostata con la quantità minima consentita;Controllo quantità minima consentita
+						#FRMSCRIVICELLA #ssrighe;$(PCQTAGEST);$(RIGAATTIVA);$(QTAMINCONS)
+						#FRMLEGGICELLA #ssrighe;$(PCQTAGEST);$(RIGAATTIVA);QTAGEST
+					#ENDIF
+				#ENDIF
+			#DBCHIUDITAB #6
+			// end 15/06/2018 					
+		
+			#MOSTRAMSGSTATO Verifica disponibilità articolo...
+
+			//Recupero Vincoli generali di pianificazione (uso del calendario).
+			#LETS SQLVINCPROD=SELECT CALAZIENDALE FROM TABVINCOLIPRODUZIONE
+
+			#DBAPRITAB #0;#4;$(SQLVINCPROD)
+				#DBLEGGICAMPO #4;CALAZIENDALE;USACALENDARIO
+				#IF $(USACALENDARIO)=0
+					#LETS STRFESTIVO=1=1
+					#LETS GGLAV= gg cal
+				#ELSE
+					#LETS STRFESTIVO=FESTIVO=0
+					#LETS GGLAV= gg lav
+				#ENDIF
+			#DBCHIUDITAB #4
+
+			// Recupero provenienza e lead time dell'articolo
+			#LETS SQLPROV=SELECT PROVENIENZA$(v) LEADTIMECUMULATO AS TAPPRONTART FROM MET_VISTALEADTIME_CUMULATO WHERE CODICEART='$(CODART)'
+			#DBAPRITAB #0;#1;$(SQLPROV)
+				#IF $(FINETABELLA)=1
+				#ELSE
+					#DBLEGGICAMPO #1;PROVENIENZA;PROVART
+					#DBLEGGICAMPO #1;TAPPRONTART;TAPPRONT
+				#ENDIF
+			#DBCHIUDITAB #1
+
+			// Se tempo di approntamento a 0, lo recupera da TabLottiRiordino o da default in file ini
+			#IF $(PROVART)=0
+				#IF {$(TAPPRONT)}=0
+					#DBAPRITAB #0;#1;SELECT max(GGAppront) AS GGAppront FROM TabLottiRiordino WHERE TipoRiord={$(PROVART)} AND CodArt='$(CODART)'
+					#IF {$(FINETABELLA)}=1
+						#LEGGIFILEINI $(V_File);CALCOLODATACONSRIC;DefGGAppront;0;TAPPRONT
+					#ELSE
+						#DBLEGGICAMPO #1;GGAppront;TAPPRONT
+					#ENDIF
+					#DBCHIUDITAB #1
+				#ENDIF
+			#ENDIF
+
+			// Calcolo disponibilità articolo sul deposito della riga documento
+			#LETS SQLDISP=SELECT SUM(CARICO-SCARICO-RESODACARICO+RESODASCARICO-IMPEGNATO) AS DISPIMM\
+						  $(b)FROM VISTAINVENTARIO\
+						  $(b)WHERE CODART = '$(CODART)' AND CODDEPOSITO = '$(CODDEPOSITO)'
+
+			#DBAPRITAB #0;#2;$(SQLDISP)
+				#IF $(FINETABELLA)=1
+					#LET DISPART=0
+				#ELSE
+					#DBLEGGICAMPO #2;DISPIMM;DISPART
+				#ENDIF
+			#DBCHIUDITAB #2
+
+			#LET DISPARTNETTA={$(DISPART)-$(QTAGEST)}
+
+			//Recupero livello di servizio e gg preparazione materiale da file configurazione
+			#LEGGIFILEINI $(V_File);CALCOLODATACONSRIC;LivServizio;;V_GGLivServ
+			#LEGGIFILEINI $(V_File);CALCOLODATACONSRIC;GGPrepMat;;V_GGPrepMat
+
+			//Inizio calcolo data consegna
+			#IF $(DISPARTNETTA)>0|$(DISPARTNETTA)=0 //Impegno comperto
+				#LETS SQLDATACONS = SET DATEFORMAT DMY\ 
+									$(b)SELECT MAX(DATACAL) AS DATACONS\
+									$(b)FROM CALPRODUZIONE\
+									$(b)WHERE DATACAL IN (SELECT TOP $(V_GGPrepMat) DATACAL\
+													 $(b)FROM CALPRODUZIONE\
+													 $(b)WHERE DATACAL >= CURRENT_TIMESTAMP\
+													 $(b)AND $(STRFESTIVO))
+
+				#DBAPRITAB #0;#3;$(SQLDATACONS)
+					#IF $(FINETABELLA)=1
+					#ELSE
+						#DBLEGGICAMPOSTR #3;DATACONS;DATACONSCALC
+					#ENDIF
+				#DBCHIUDITAB #3
+
+				//#LETS MSG=Impegno coperto.$(cr)Tempo prep. mat. considerato: $(V_GGPrepMat) $(GGLAV).$(cr)Data consegna calcolata: $(DATACONSCALC)$(cr)\
+				//		Confermare la data consegna calcolata?
+
+			#ELSE
+				#LEGGIFILEINI $(V_File);CALCOLODATACONSRIC;DefGGAppront;;V_DefGGAppront
+				#IF $(PROVART)=0 //Impegno non coperto, articolo di acquisto.
+					#IF $(TAPPRONT)=0
+						#LET TAPPRONT = $(V_DefGGAppront)
+					#ENDIF
+					#LETS SQLDATACONS = SET DATEFORMAT DMY\
+										$(b)SELECT MAX(ISNULL(DATACAL$(v)'01/01/1900')) AS DATACONS\
+										$(b)FROM CALPRODUZIONE\
+										$(b)WHERE DATACAL IN (SELECT TOP $(TAPPRONT) DATACAL\
+														 $(b)FROM CALPRODUZIONE\
+														 $(b)WHERE DATACAL >= CURRENT_TIMESTAMP\
+														 $(b)AND $(STRFESTIVO))
+
+					#DBAPRITAB #0;#3;$(SQLDATACONS)
+						#IF $(FINETABELLA)=1
+						#ELSE
+							#DBLEGGICAMPOSTR #3;DATACONS;DATACONSCALC
+						#ENDIF
+					#DBCHIUDITAB #3
+
+					#LETS MSG=Impegno scoperto.$(cr)Prov.: Acquisto$(cr)Leat Time: $(TAPPRONT) $(GGLAV).$(cr)Data consegna calcolata: $(DATACONSCALC)$(cr)\
+							  Confermare la data consegna calcolata?
+
+					#LETS MSG1=Impegno scoperto.$(cr)Prov.: Acquisto$(cr)Leat Time: $(TAPPRONT) $(GGLAV).$(cr)Data consegna calcolata: $(DATACONSCALC)$(cr)$(cr)\
+							  Lead Time a zero!$(cr)Ricalcolo date non possibile!
+
+// 					#IF $(TAPPRONT)=0
+// 						#MESSAGGIO 0132;$(msg1);Calcolo data consegna.
+// 					#ELSE
+// 						#MESSAGGIO 4132;$(msg);Calcolo data consegna.
+// 					#ENDIF
+
+				#ELSE //Impegno non coperto, articolo di produzione.
+					#IF $(TAPPRONT)>=$(V_GGLivServ)
+						#LETS V_GGLivServ = $(TAPPRONT)
+						#LETS MSGTEMPO=Tempo di Produzione Considerato:
+					#ELSE
+						#LETS MSGTEMPO=Liv. Servizio considerato:
+					#ENDIF
+					#LETS SQLDATACONS = SET DATEFORMAT DMY\
+										$(b)SELECT MAX(DATACAL) AS DATACONS\
+										$(b)FROM CALPRODUZIONE\
+										$(b)WHERE DATACAL IN (SELECT TOP $(V_GGLivServ) DATACAL\
+														 $(b)FROM CALPRODUZIONE\
+														 $(b)WHERE DATACAL >= CURRENT_TIMESTAMP\
+														 $(b)AND $(STRFESTIVO))
+					
+					#DBAPRITAB #0;#3;$(SQLDATACONS)
+						#IF $(FINETABELLA)=1
+						#ELSE
+							#DBLEGGICAMPOSTR #3;DATACONS;DATACONSCALC
+
+						#ENDIF
+					#DBCHIUDITAB #3
+
+					#LETS MSG=Impegno scoperto.$(cr)Prov.: Produzione$(cr)$(MSGTEMPO) $(V_GGLivServ) $(GGLAV).$(cr)Data consegna calcolata: $(DATACONSCALC)$(cr)\
+							  Confermare la data consegna calcolata?
+
+// 					#MESSAGGIO 4132;$(msg);Calcolo data consegna.
+
+				#ENDIF
+			#ENDIF
+			
+			
+//			#IF $(RISPOSTAMESSAGGIO)=7|$(RISPOSTAMESSAGGIO)=1 //No/OK
+//			#ELSE //Si
+				#RIFERIMENTOCOLONNA #ssrighe; 6; PCDATACONS
+				#FRMSCRIVICELLA #ssrighe;$(PCDATACONS);$(RIGAATTIVA);$(DATACONSCALC)
+//			#ENDIF
+		
+		#ENDIF
+		
+		#DBCHIUDITAB #5
+
+		#CANCELLAMSGSTATO				
+		#DBDISCONNETTI #0
+		
+	//#ENDIF
+	
+#ENDIF
+
+
+#FINEMODESCLUSIVA

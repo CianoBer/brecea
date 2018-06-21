@@ -1,0 +1,101 @@
+//RICALCOLO COMPLETO DEI COSTI DEGLI ORDINI DI PRODUZIONE
+//GABRIELE LORENZONI
+
+
+[VALUTA]
+//--** parametri iniziali : DATA_INIZIO  e scelta  CM_CU (valori : CM,CU)  (COSTO MEDIO / COSTO ULTIMO) 
+//--**			 decimali di arrotondamento del costo  ARR_DEC  per l'euro (per lire lasciare zero)
+#MODESCLUSIVA
+#CHR 47;SEPARA
+#CHR 45;MENO
+#CHR 13;CR
+#CONCATENASTR VIRGOLA;","
+//----------------------------------------------------
+//  filtro 
+#STAMPA RIC_COSTI_OPD;1;100009
+#LETS DATA_INIZIO=$(data_inizio)
+//#messaggio 0;data_inizio $(data_inizio)
+#PARTESTR DATA_INIZIO;1;4;ANNO
+#PARTESTR DATA_INIZIO;3;4;ANNO2
+#PARTESTR DATA_INIZIO;6;2;MESE
+#PARTESTR DATA_INIZIO;9;2;GIORNO
+#LETS DATA_INIZIO=$(GIORNO)$(SEPARA)$(MESE)$(SEPARA)$(ANNO)
+
+#LETS DATA_2=$(GIORNO)$(SEPARA)$(MESE)$(SEPARA)$(ANNO2)
+#LETS DATA_3=$(ANNO)$(SEPARA)$(MESE)$(SEPARA)$(GIORNO)
+
+//#messaggio 0;data_inizio,DATA_2,,DATA_3:  :    $(data_inizio)   $(data_2)  $(data_3)  
+
+#LET valorizza=$(valorizza)   // 0=costo medio, 1=costo ultimo
+#IF $(valorizza) = 0 
+	#LETS CM_CU=CM   // o=costo medio,
+#ELSE
+	#LETS CM_CU=CU   // 1=costo ultimo,
+#ENDIF
+//#messaggio 0;CM_CU $(CM_CU)
+#LET  ARR_DEC=$(Confidenza)
+//#Messaggio 0;ARR_DEC $(ARR_DEC)
+#LETT NRTERM=$(NRTERMINALE)
+//controllo se data inizio è > della data fine dell'ultimo esercizio chiuso
+#DBCONNETTI #0
+#LET CONTROLLO =0
+#DBAPRITAB #0;#1;select top 1 CODICE, datafinemag  from TABESERCIZI where STATOMAG =1 order by CODICE desc
+	#IF $(FINETABELLA) !=1
+		#DBLEGGICAMPO #1;CODICE;CODICE
+		#DBLEGGICAMPOSTR #1;datafinemag;datafinemag
+		#PARTESTR datafinemag;1;2;GIORNO
+		#PARTESTR datafinemag;4;2;MESE
+		#PARTESTR datafinemag;7;4;ANNO
+		#LETS datafinemag=$(ANNO)$(SEPARA)$(MESE)$(SEPARA)$(GIORNO)
+		//#messaggio 0;datafinemag $(datafinemag)
+		#IF  $(data_3)>> $(datafinemag)
+			#LET CONTROLLO =0   // OK
+		#ELSE
+			#messaggio 4132;La data indicata nel filtro appartiene ad un esercizio con magazzino chiuso.$(CR)Continuare comunque?;Ricalcolo Costi
+			#IF  $(RISPOSTAMESSAGGIO) = 7
+				#LET CONTROLLO =1
+			#ELSE
+			#ENDIF
+		#ENDIF
+	#ELSE
+		//#messaggio 0;NESSUN ESERCIZIO CHIUSO
+	#ENDIF
+#DBCHIUDITAB #1
+//_______________________________________________________________________________________________________________
+#IF $(controllo) = 0
+// inizio calcolo : 
+	#MESSAGGIO 64;Inizio Elaborazione Ricalcolo Completo Costi Ordini di Produzione;Ricalcolo Costi.
+	#MOSTRAMSGSTATO Ricalcolo Costi di Produzione. Generazione tabella livelli...
+	#DBESEGUISQL #0;delete from MET_TABLIV
+	#DBESEGUISQL #0;set dateformat dmy insert into MET_TABLIV (LIVELLO_CALCOLO) (select distinct LIVELLO from MET_VISTA_ODPDAAGG where DATAMAX >= '$(DATA_INIZIO)')
+	//#messaggio 0;  loop per ogni riga di MET_TABLIV  -   sia LIV_RIGA  il livello in trattamento :
+	#DBAPRITAB #0;#3;select LIVELLO_CALCOLO from MET_TABLIV
+	
+		#IF $(FINETABELLA)!=1
+			#DBPRIMO #3
+			#DO				
+				//#LETT FINETAB3=$(FINETABELLA)
+				#DBLEGGICAMPOSTR #3;LIVELLO_CALCOLO;LIV_RIGA
+				//#messaggio 0;Inizio Elaborazione livello  $(LIV_RIGA)   
+				#MOSTRAMSGSTATO Ricalcolo Costi di Produzione. Elaborazione Livello:  $(LIV_RIGA)   
+				//#CONCATENASTR stringsql;"set dateformat dmy EXECUTE DBO.RICALCOLO_COSTI_ODP_PROVA '$(data_inizio)','$(CM_CU)',$(ARR_DEC),'$(LIV_RIGA)'"
+				#CONCATENASTR stringsql;"set dateformat dmy EXECUTE DBO.RICALCOLO_COSTI_ODP '$(data_inizio)','$(CM_CU)',$(ARR_DEC),'$(LIV_RIGA)'"
+				#DBESEGUISQL #0;$(stringsql)
+			#DBSUCCESSIVO #3
+			//#LETT FINETAB3=$(FINETABELLA)
+			#LOOP $(FINETABELLA)=1			
+		#ELSE
+			#messaggio 48;Tabella Livelli Vuota!Attenzione!
+			#ANNULLA
+	#ENDIF
+	#DBCHIUDITAB #3
+#ELSE
+#ENDIF
+#CANCELLAMSGSTATO
+#DBDISCONNETTI #0
+#MESSAGGIO 64;Ricalcolo Costi Ordini di Produzione Completato!;Ricalcolo Costi.
+//_________________________________________________________________________________________________________________
+
+
+
+#FINEMODESCLUSIVA

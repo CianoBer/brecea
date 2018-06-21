@@ -1,0 +1,58 @@
+//0 - codice articolo
+//1 - descrizione dell’articolo
+//2 - stringa contenente l’elenco delle varianti nella forma:<tipologia>= < variante>[;< tipologia>=< variante>]
+//3 - Forza la riesecuzione della validazione. Impostando un valore >0 permette di rivalidare il codice articolo. ATTENZIONE: viene rielaborato anche l’agente!
+[VALUTA]
+#MODESCLUSIVA
+	#DBCONNETTI #0
+		#DBAPRITAB #0;#1;SELECT CODICEART FROM ANAGRAFICAARTICOLICOMM WHERE CODICEART='$(PARAMETRO:0)' AND ESERCIZIO=$(ANNOATTIVO) AND ESAURITO=1
+			#IF $(FINETABELLA)=1
+			#ELSE
+				//#MESSAGGIO 16;Attenzione: articolo $(parametro:0) esaurito!
+				#LETS ARTICOLO = $(PARAMETRO:0)
+				//COLORAZIONE CAMPO
+				#SCRIPT VBSCRIPT
+					If MXNU.EXEName = "MetodoEvolus" Then
+						dim frmDoc
+						Set frmDoc = MXNU.FrmMetodo.FormAttiva
+						If (Not frmDoc Is Nothing) Then
+							If (frmDoc.HelpContextID = 4000 Or frmDoc.HelpContextID = 85110) Then
+								Articolo = AgtVar.Item("ARTICOLO")
+								Riga = AgtVar.Item("RIGAATTIVA")
+								Call MXNU.MsgBoxEx("Attenzione: articolo " & Articolo & " esaurito!", 16, "Articolo ESAURITO!")
+								frmDoc.ssRighe.Col = -1 'Colonna
+								frmDoc.ssRighe.Row = Riga
+								frmDoc.ssRighe.ForeColor = RGB(0,0,0)
+								frmDoc.ssRighe.BackColor = RGB(255,100,120)
+							End If
+						End If
+						Set frmDoc = Nothing
+					End If
+				#ENDSCRIPT
+
+				//COLORAZIONE RIGHE ORDINI DI PRODUZIONE IN INSERIMENTO MANUALE
+				#SCRIPT VBSCRIPT
+					If MXNU.EXEName = "MetodoEvolus" Then
+						dim frmProd
+						Set frmProd = MXNU.FrmMetodo.FormAttiva
+						If (Not frmProd Is Nothing) Then
+							If (frmProd.HelpContextID = 5410) Then
+								Articolo = AgtVar.Item("ARTICOLO")
+								Riga = AgtVar.Item("RIGAATTIVA")
+								Call MXNU.MsgBoxEx("Attenzione: articolo " & Articolo & " esaurito!", 16, "Articolo ESAURITO!")
+								frmProd.ssRigheOrd.Col = -1 'Colonna
+								frmProd.ssRigheOrd.Row = Riga
+								frmProd.ssRigheOrd.ForeColor = RGB(0,0,0)
+								frmProd.ssRigheOrd.BackColor = RGB(255,100,120)
+							End If
+						End If
+						Set frmDoc = Nothing
+					End If
+				#ENDSCRIPT
+
+			#ENDIF
+		#DBCHIUDITAB #1
+	#DBDISCONNETTI #0
+#FINEMODESCLUSIVA
+
+

@@ -1,0 +1,35 @@
+// ---------------------------------------------------------- //
+// Apertura form Manutenzione Costi per Articolo da Documenti //
+// ---------------------------------------------------------- //
+
+
+
+[VALUTA]
+
+// Recupero articolo riga attiva
+#RIFERIMENTOCOLONNA #ssRighe;2;V_PosArt
+#FRMLEGGICELLA #ssRighe;{$(V_PosArt)};{$(RIGAATTIVA)};V_Art
+
+#SCRIPT VBScript
+
+	Dim strArt, colValoriChiave, frmAtt
+
+	' Apertura form manutenzione costi
+	Call MXNU.FrmMetodo.EseguiAzione("UtilitaCostiItem", 5, 5846)
+
+	' Recupero codice articolo
+	strArt = AGTVAR.Item("V_Art")
+
+	' Passaggio codice articolo alla form manutenzione costi
+	Set colValoriChiave = VBCollection
+	colValoriChiave.Add strArt
+	For Each frmAtt in MXNU.FrmMetodo.MDIForms
+		If frmAtt.Name = "frmCostiSTDArt" And frmAtt.HelpContextID = 5846 Then
+			Call frmAtt.AzioniMetodo(11, colValoriChiave)
+		End If
+	Next
+
+	Set frmAtt = Nothing
+	Set colValoriChiave = Nothing
+
+#ENDSCRIPT

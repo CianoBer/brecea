@@ -1,0 +1,15 @@
+<documento>
+	<testa>
+		<campo nome="numerodoc" extra="false" />
+		<campo nome="tipodoc" extra="false" />
+		<campo nome="datadoc" extra="false" />
+	</testa>
+	<righe>
+		<campo mapid="" nome="idriga" extra="false" />
+		<campo mapid="" nome="codart" extra="false" />
+		<campo mapid="" nome="descrizioneart" extra="false" />
+		<campo mapid="" nome="umgest" extra="false" />
+		<campo mapid="" nome="qtagest" extra="false" />
+		<campo mapid="" nome="totnettorigaeuro" extra="false" />
+	</righe>
+</documento>

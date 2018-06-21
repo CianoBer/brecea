@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<settings>
+  <datasource>
+	  <connectionstring>Data Source=SRVERP01;Initial Catalog=BRECEA;User Id=trm166;Password=terminale;</connectionstring>
+  </datasource>
+  <parameters>
+    <groupname>RIL_DATIFABB</groupname>
+    <activateshortcut>CTRL+ALT+F1</activateshortcut>
+  </parameters>
+</settings>

@@ -1,0 +1,45 @@
+// ------------------------------------------------------------------ //
+// Agente di copia ubicazione provvisoria dalla riga attuale in tutte //
+// le righe seguenti dove la stessa è vuota tramite apposito bottone  //
+// ------------------------------------------------------------------ //
+
+
+
+[VALUTA]
+
+#MODESCLUSIVA
+
+// Scatta solo se non è l'ultima riga e se esiste il campo ubicazione provvisoria
+#LET V_RigaAtt={$(RIGAATTIVA)}
+#FRMGRIGLIA #ssRighe;-1;-1;-4
+#LET V_RigaMax={$(RIGHEFOGLIO)}
+#RIFERIMENTOCOLONNA #ssRighe;-4;V_PosUbiDes
+#RIFERIMENTOCOLONNA #ssRighe;1;V_PosTipoRiga
+#IF {$(V_RigaMax)}>0 & {$(V_RigaAtt)}<{$(V_RigaMax)} & {$(V_PosUbiDes)}>0 & {$(V_PosTipoRiga)}>0
+
+	// Verifica se l'ubicazione provvisoria è presente
+	#FRMLEGGICELLA #ssRighe;{$(V_PosUbiDes)};{$(V_RigaAtt)};V_UbiDesAtt
+	#TRIM V_UbiDesAtt;V_UbiDesAtt;T
+	#IF $(V_UbiDesAtt)==
+	#ELSE
+
+		// Ciclo copia ubicazione provvisoria in righe successive
+		#LET V_Riga={$(V_RigaAtt)+1}
+		#DO
+			#FRMLEGGICELLA #ssRighe;{$(V_PosTipoRiga)};{$(V_Riga)};V_TipoRiga
+			#PARTESTR V_TipoRiga;1;1;V_TipoRiga
+			#FRMLEGGICELLA #ssRighe;{$(V_PosUbiDes)};{$(V_Riga)};V_UbiDes
+			#TRIM V_UbiDes;V_UbiDes;T
+
+			// Se vuota scrive nella riga l'ubicazione provvisoria della riga attuale
+			#IF $(V_UbiDes)== & $(V_TipoRiga)<>R & $(V_TipoRiga)<>D
+				#FRMSCRIVICELLA #ssRighe;{$(V_PosUbiDes)};{$(V_Riga)};$(V_UbiDesAtt)
+			#ENDIF
+
+			#LET V_Riga={$(V_Riga)+1}
+		#LOOP {$(V_Riga)}>{$(V_RigaMax)}
+	#ENDIF
+
+#ENDIF
+
+#FINEMODESCLUSIVA

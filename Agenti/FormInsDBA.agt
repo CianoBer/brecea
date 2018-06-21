@@ -1,0 +1,122 @@
+// ---------------------------------------------------------------- //
+// Impostazione data validità a 01/01/2008 in fase di registrazione //
+// Verifica della presenza in altra riga del componente             //
+// ---------------------------------------------------------------- //
+
+
+
+[CONTROLLI]
+
+#Form
+#ssRigheDba
+#TXTB_0
+
+
+
+
+[FORM_BEFORE_SAVE]
+
+// Imposta la data a 01/01/2008
+#FRMSCRIVICAMPOSTR #msked_0;01/01/2008
+
+#CHR 13;CR
+#FRMLEGGICAMPOSTR #TXTB_0;CODICE
+
+#IF $(CODICE)==
+#ELSE
+	#DBCONNETTI #0
+	#DBAPRITAB #0;#1;SELECT PROGRESSIVO FROM DISTINTAARTCOMPOSTI WHERE ARTCOMPOSTO='$(CODICE)'
+	#DBPRIMO #1
+	#IF $(FINETABELLA)=1
+	#ELSE
+		#DBLEGGICAMPO #1;PROGRESSIVO;PROGRESSIVO
+		#DBAPRITAB #0;#2;SELECT PDMGenerated FROM EXTRADISTINTA WHERE PROGRESSIVO=$(PROGRESSIVO)
+		#DBPRIMO #2
+		#IF $(FINETABELLA)=1
+		#ELSE
+			#DBLEGGICAMPO #2;PDMGenerated;PDMGenerated
+
+			#IF $(PDMGenerated)=1
+				#MESSAGGIO 4372;Sei sicuro di voler apportare modifiche ad una distinta$(CR)$(CR)        GENERATA E GESTITA DAL SISTEMA PDM?;ATTENZIONE!!!
+				
+				#IF $(RISPOSTAMESSAGGIO)==6
+				#ELSE
+					#ANNULLA
+				#ENDIF
+			
+			#ENDIF
+
+		#ENDIF
+		#DBCHIUDITAB #2
+	#ENDIF
+
+	#DBCHIUDITAB #1
+	#DBDISCONNETTI #0
+#ENDIF
+
+
+
+[SSRIGHEDBA_BEFORE_EDIT]
+
+#FRMLEGGICELLA #ssRigheDba;1;{$(RIGAATTIVA)};V_ArtPrima
+
+
+
+[SSRIGHEDBA_AFTER_EDIT]
+
+#LET V_Riga={$(RIGAATTIVA)}
+#FRMLEGGICELLA #ssRigheDba;1;{$(V_Riga)};V_ArtDopo
+#IF $(V_ArtPrima)==$(V_ArtDopo)
+#ELSE
+	#FRMGRIGLIA #ssRigheDba;-1;-1;-4
+	#LET V_RigaMax={$(RIGHEFOGLIO)}
+	#IF {$(V_RigaMax)}>0
+		#LET V_Cont=1
+		#DO
+			#IF {$(V_Cont)}<>{$(V_Riga)}
+				#FRMLEGGICELLA #ssRigheDba;1;{$(V_Cont)};V_Art
+				#IF $(V_Art)==$(V_ArtDopo)
+					#MESSAGGIO 48;L'articolo [$(V_ArtDopo)] è già presente alla riga $(V_Cont);ATTENZIONE!
+					#LET V_Cont={$(V_RigaMax)}
+				#ENDIF
+			#ENDIF
+
+			#LET V_Cont={$(V_Cont)+1}
+		#LOOP {$(V_Cont)}>{$(V_RigaMax)}
+	#ENDIF
+#ENDIF
+
+
+
+
+[TXTB_0_LostFocus]
+#CHR 13;CR
+
+#FRMLEGGICAMPOSTR #TXTB_0;CODICE
+
+#IF $(CODICE)==
+#ELSE
+	#DBCONNETTI #0
+	#DBAPRITAB #0;#1;SELECT PROGRESSIVO FROM DISTINTAARTCOMPOSTI WHERE ARTCOMPOSTO='$(CODICE)'
+	#DBPRIMO #1
+	#IF $(FINETABELLA)=1
+	#ELSE
+		#DBLEGGICAMPO #1;PROGRESSIVO;PROGRESSIVO
+		#DBAPRITAB #0;#2;SELECT PDMGenerated FROM EXTRADISTINTA WHERE PROGRESSIVO=$(PROGRESSIVO)
+		#DBPRIMO #2
+		#IF $(FINETABELLA)=1
+		#ELSE
+			#DBLEGGICAMPO #2;PDMGenerated;PDMGenerated
+
+			#IF $(PDMGenerated)=1
+				#MESSAGGIO 48;DISTINTA BASE GENERATA E GESTITA DAL SISTEMA PDM$(CR)$(CR)Ogni Modifica che si apporterà potrebbe essere persa$(CR)alla prossima sincronizzazione con il sistema PDM;ATTENZIONE!!!
+			#ENDIF
+
+		#ENDIF
+		#DBCHIUDITAB #2
+	#ENDIF
+
+	#DBCHIUDITAB #1
+	#DBDISCONNETTI #0
+
+#ENDIF

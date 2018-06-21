@@ -1,0 +1,123 @@
+// --------------------------------------------------------------------------------------- //
+// Svuotamento ubicazioni su spread movimenti di produzione (scatta prima del salvataggio) //
+// --------------------------------------------------------------------------------------- //
+
+
+
+[VALUTA]
+
+// Recupero tipo movimento
+
+#FRMLEGGICAMPO #cmb_0;V_TipoMov
+
+// Spostamento focus linguetta Versamenti
+
+#FRMCONTROLLO #ling_2;6
+
+// Recupero posizione colonne ubicazioni
+
+#RIFERIMENTOCOLONNA #ssRigheOrd;32;V_PosOrdUbic
+#RIFERIMENTOCOLONNA #ssRigheOrd;38;V_PosOrdUbicColl
+#RIFERIMENTOCOLONNA #ssRigheOrd;60;V_PosOrdUbicSc
+#RIFERIMENTOCOLONNA #ssRigheOrd;64;V_PosOrdUbicScColl
+
+// Recupero posizione colonne ubicazioni
+
+#RIFERIMENTOCOLONNA #ssRigheImp;30;V_PosImpUbic
+#RIFERIMENTOCOLONNA #ssRigheImp;36;V_PosImpUbicColl
+#RIFERIMENTOCOLONNA #ssRigheImp;49;V_PosImpUbicSc
+#RIFERIMENTOCOLONNA #ssRigheImp;53;V_PosImpUbicScColl
+
+// Verifica presenza righe versamenti
+
+#FRMGRIGLIA #ssRigheOrd;1;1;-4
+#LET V_RigaMaxOrd={$(RIGHEFOGLIO)}
+#IF {$(V_RigaMaxOrd)}>0
+	#LET V_RigaOrd=1
+
+	// Ciclo righe versamenti
+
+	#DO
+
+		// Posizionamento riga versamento
+
+		#FRMCONTROLLO #ling_2;6
+		#FRMGRIGLIA #ssRigheOrd;1;{$(V_RigaOrd)};0
+		#FRMLEGGICELLA #ssRigheOrd;1;{$(V_RigaOrd)};V_Prova
+
+		// Svuotamento ubicazioni riga se Versamento o Versamento con Prelevamento
+
+		#IF {$(V_TipoMov)}=0 | {$(V_TipoMov)}=2
+			#IF {$(V_PosOrdUbic)}>0
+				#FRMSCRIVICELLA #ssRigheOrd;{$(V_PosOrdUbic)};{$(V_RigaOrd)};
+			#ENDIF
+			#IF {$(V_PosOrdUbicColl)}>0
+				#FRMSCRIVICELLA #ssRigheOrd;{$(V_PosOrdUbicColl)};{$(V_RigaOrd)};
+			#ENDIF
+			#IF {$(V_PosOrdUbicSc)}>0
+				#FRMSCRIVICELLA #ssRigheOrd;{$(V_PosOrdUbicSc)};{$(V_RigaOrd)};
+			#ENDIF
+			#IF {$(V_PosOrdUbicScColl)}>0
+				#FRMSCRIVICELLA #ssRigheOrd;{$(V_PosOrdUbicScColl)};{$(V_RigaOrd)};
+			#ENDIF
+		#ENDIF
+
+		// Passa ai prelievi se Prelevamento o Versamento con Prelevamento
+
+		#IF {$(V_TipoMov)}=1 | {$(V_TipoMov)}=2
+
+			// Spostamento focus linguetta Prelievi
+
+			#FRMCONTROLLO #ling_3;6
+			#ASPETTA 1
+
+			// Verifica presenza righe prelievi
+
+			#FRMGRIGLIA #ssRigheImp;1;1;-4
+			#LET V_RigaMaxImp={$(RIGHEFOGLIO)}
+			#IF {$(V_RigaMaxImp)}>0
+				#LET V_RigaImp=1
+
+				// Ciclo righe prelievi
+
+				#DO
+
+					// Posizionamento riga prelievo
+
+					#FRMGRIGLIA #ssRigheImp;1;{$(V_RigaImp)};0
+					#FRMLEGGICELLA #ssRigheImp;1;{$(V_RigaImp)};V_Prova
+
+					// Svuotamento ubicazioni riga se Prelevamento o Versamento con Prelevamento
+
+					#IF {$(V_PosImpUbic)}>0
+						#FRMSCRIVICELLA #ssRigheImp;{$(V_PosImpUbic)};{$(V_RigaImp)};
+					#ENDIF
+					#IF {$(V_PosImpUbicColl)}>0
+						#FRMSCRIVICELLA #ssRigheImp;{$(V_PosImpUbicColl)};{$(V_RigaImp)};
+					#ENDIF
+					#IF {$(V_PosImpUbicSc)}>0
+						#FRMSCRIVICELLA #ssRigheImp;{$(V_PosImpUbicSc)};{$(V_RigaImp)};
+					#ENDIF
+					#IF {$(V_PosImpUbicScColl)}>0
+						#FRMSCRIVICELLA #ssRigheImp;{$(V_PosImpUbicScColl)};{$(V_RigaImp)};
+					#ENDIF
+
+					// Riga prelievo successiva
+
+					#LET V_RigaImp={$(V_RigaImp)}+1
+				#LOOP {$(V_RigaImp)}>{$(V_RigaMaxImp)}
+			#ENDIF
+			#ASPETTA 1
+		#ENDIF
+
+		// Riga versamento successiva
+
+		#LET V_RigaOrd={$(V_RigaOrd)}+1
+	#LOOP {$(V_RigaOrd)}>{$(V_RigaMaxOrd)}
+
+	// Ripristino focus su prima riga linguetta Versamenti
+
+	#FRMCONTROLLO #ling_2;6
+	#FRMGRIGLIA #ssRigheOrd;1;1;0
+	#FRMLEGGICELLA #ssRigheOrd;1;1;V_Prova
+#ENDIF

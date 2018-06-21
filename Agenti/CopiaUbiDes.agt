@@ -1,0 +1,120 @@
+// ----------------------------------------------------------------------------------------- //
+// Agente di copia ubicazione descrittiva dalla riga articolo precedente in nuova riga       //
+// Avviso se si usa un articolo ghost in presenza di causali di movimentazione del magazzino //
+// ----------------------------------------------------------------------------------------- //
+
+
+
+[VALUTA]
+
+#MODESCLUSIVA
+
+// Scatta solo dalla seconda riga in poi e se esiste il campo ubicazione descrittiva
+#LET V_RigaAtt={$(RIGAATTIVA)}
+#RIFERIMENTOCOLONNA #ssRighe;-4;V_PosUbiDes
+#IF {$(V_RigaAtt)}>1 & {$(V_PosUbiDes)}>0
+
+	// Verifica se ubicazione descrittiva vuota
+	#FRMLEGGICELLA #ssRighe;{$(V_PosUbiDes)};{$(V_RigaAtt)};V_UbiDes
+	#TRIM V_UbiDes;V_UbiDes;T
+	#IF $(V_UbiDes)==
+
+		// Ciclo ricerca ubicazione descrittiva riga articolo precedente
+		#LET V_Riga={$(V_RigaAtt)-1}
+		#DO
+			#FRMLEGGICELLA #ssRighe;{$(V_PosUbiDes)};{$(V_Riga)};V_UbiDes
+			#TRIM V_UbiDes;V_UbiDes;T
+
+			// Se trovata la scrive nella riga attuale
+			#IF NOT($(V_UbiDes)==)
+				#FRMSCRIVICELLA #ssRighe;{$(V_PosUbiDes)};{$(V_RigaAtt)};$(V_UbiDes)
+				#LET V_Riga=1
+			#ENDIF
+
+			#LET V_Riga={$(V_Riga)-1}
+		#LOOP {$(V_Riga)}<1
+	#ENDIF
+#ENDIF
+
+
+
+// Recupera articolo e causali di movimentazione
+#LETS V_Art=
+#LET V_Cau=0
+#LET V_CauColl=0
+#LET V_CauComp=0
+#LET V_CauCompColl=0
+#RIFERIMENTOCOLONNA #ssRighe;2;V_PosArt
+#RIFERIMENTOCOLONNA #ssRighe;90;V_PosCau
+#RIFERIMENTOCOLONNA #ssRighe;94;V_PosCauColl
+#RIFERIMENTOCOLONNA #ssRighe;98;V_PosCauComp
+#RIFERIMENTOCOLONNA #ssRighe;102;V_PosCauCompColl
+#IF {$(V_PosArt)}>0
+	#FRMLEGGICELLA #ssRighe;{$(V_PosArt)};{$(V_RigaAtt)};V_Art
+#ENDIF
+#IF {$(V_PosCau)}>0
+	#FRMLEGGICELLA #ssRighe;{$(V_PosCau)};{$(V_RigaAtt)};V_Cau
+#ENDIF
+#IF {$(V_PosCauColl)}>0
+	#FRMLEGGICELLA #ssRighe;{$(V_PosCauColl)};{$(V_RigaAtt)};V_CauColl
+#ENDIF
+#IF {$(V_PosCauComp)}>0
+	#FRMLEGGICELLA #ssRighe;{$(V_PosCauComp)};{$(V_RigaAtt)};V_CauComp
+#ENDIF
+#IF {$(V_PosCauCompColl)}>0
+	#FRMLEGGICELLA #ssRighe;{$(V_PosCauCompColl)};{$(V_RigaAtt)};V_CauCompColl
+#ENDIF
+
+// Se indicato articolo, verifica se si tratta di documenti su cui controllare anche se causali a 0
+#LET V_Mess=0
+#IF $(V_Art)==
+#ELSE
+
+	// Recupero file configurazione
+	#CERCAFILE ConfigPers.ini;$(PERCORSOMETODO)\Pers\$(DITTAATTIVA);V_File
+	#IF $(V_File)==
+		#CERCAFILE ConfigPers.ini;$(PERCORSOMETODO)\Pers;V_File
+	#ENDIF
+
+	// Verifica che per il documento si debba dare messaggio sempre con ghost
+	#FRMLEGGICAMPOSTR #txtb_0;V_Doc
+	#LEGGIFILEINI $(V_File);MESSGHOST;TipiDoc;;V_ElencoDoc
+	#TRIM V_ElencoDoc;V_ElencoDoc;T
+	#IF NOT($(V_ElencoDoc)==)
+		#LET V_Cont=0
+		#DO
+			#IF $(V_ElencoDoc:$(V_Cont))==$(V_Doc)
+				#LET V_Mess=1
+			#ENDIF
+			#EXIT $(V_ElencoDoc:$(V_Cont))==$(V_Doc)
+
+			#LET V_Cont={$(V_Cont)+1}
+		#LOOP $(V_ElencoDoc:$(V_Cont))==
+	#ENDIF
+#ENDIF
+
+// Se sono presenti le causali di magazzino, verifica se si tratta di una articolo ghost
+#IF {$(V_Cau)}>0 | {$(V_CauColl)}>0 | {$(V_CauComp)}>0 | {$(V_CauCompColl)}>0 | {$(V_Mess)}=1
+
+	// Apertura connessione database
+	#DBCONNETTI #0
+
+	// Verifica se l'articolo è un ghost
+	#DBAPRITAB #0;#1;SELECT AggiornaMag FROM AnagraficaArticoli WHERE Codice='$(V_Art)'
+	#IF {$(FINETABELLA)}=1
+		#LET V_Ghost=0
+	#ELSE
+		#DBLEGGICAMPO #1;AggiornaMag;V_Ghost
+	#ENDIF
+	#DBCHIUDITAB #1
+
+	// Chiusura connessione database
+	#DBDISCONNETTI #0
+
+	// Se articolo ghost viene dato un avviso
+	#IF {$(V_Ghost)}=0
+		#MESSAGGIO 48;L'articolo [$(V_Art)] non movimenta il magazzino! Non utilizzare questo articolo!;ATTENZIONE!
+	#ENDIF
+#ENDIF
+
+#FINEMODESCLUSIVA

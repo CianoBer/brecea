@@ -1,0 +1,72 @@
+//Agente Calcola Costo medio articolo in uscita dalla cella q.tà
+//Attivo per il tipo riga 104
+//PROGRESSIVI QUERY APERTE
+//1 - STORICOMAG PER CALCOLO COSTO MEDIO.
+//
+//PROGRESSIVI CONNESSIONI
+//0 - CONNESSIONE PREDEFINITA
+
+[VALUTA]
+#CHR 13;cr
+#CHR 32;b
+#CHR 44;v
+#CHR 45;TRATTINO
+#CHR 59;PV
+
+#FRMLEGGICAMPOSTR #TXTB_0;V_Doc
+#FRMLEGGICAMPOSTR #MSKEDT_0;V_DataDoc
+
+// Recupero file configurazione
+#CERCAFILE ConfigPers.ini;$(PERCORSOMETODO)\Pers\$(DITTAATTIVA);V_File
+#IF $(V_File)==
+	#CERCAFILE ConfigPers.ini;$(PERCORSOMETODO)\Pers;V_File
+#ENDIF
+
+// Verifica se documento soggetto a calcolo data
+#LEGGIFILEINI $(V_File);CALCOLAPMPRIGADOC;TipiDoc;;V_ElencoDoc
+#TRIM V_ElencoDoc;V_ElencoDoc;T
+#LET V_Calcola=0
+#IF NOT($(V_ElencoDoc)==)
+	#LET V_Cont=0
+	#DO
+		#IF $(V_ElencoDoc:$(V_Cont))==$(V_Doc)
+			#LET V_Calcola=1
+		#ENDIF
+		#EXIT $(V_ElencoDoc:$(V_Cont))==$(V_Doc)
+
+		#LET V_Cont={$(V_Cont)+1}
+	#LOOP $(V_ElencoDoc:$(V_Cont))==
+#ENDIF
+
+#IF {$(V_Calcola)}=0
+#ELSE
+	#MOSTRAMSGSTATO Calcolo prezzo madio articolo in corso...
+
+	#RIFERIMENTOCOLONNA #SSRIGHE;2;PCCODART
+	#RIFERIMENTOCOLONNA #SSRIGHE;17;PCPREZZO
+	
+	#FRMLEGGICELLA #SSRIGHE;$(PCCODART);$(RIGAATTIVA);CODART
+
+	#IF $(CODART)==
+	#ELSE
+		//Calcolo il prezzo medio dell'articolo
+		#DBCONNETTI #0
+
+		#LETS SQLPMP=SET DATEFORMAT DMY SELECT ISNULL((CASE WHEN SUM(QtaCarico) <> 0 THEN ROUND(SUM(ValoreCaricoEuro)/SUM(QtaCarico)$(V)6) ELSE 0 END)$(V)0) PMPART\
+				     $(b)FROM VistaGiacenze\
+				     $(b)WHERE Esercizio = $(ANNOATTIVO) AND CodArt='$(CODART)' AND DATAMOV <= '$(V_DataDoc)' GROUP BY CodArt
+
+		#DBAPRITAB #0;#1;$(SQLPMP)
+
+			#IF $(FINETABELLA)=1
+			#ELSE
+				#DBLEGGICAMPO #1;PMPART;PMPART
+			#ENDIF
+
+		#DBCHIUDITAB #1
+		#DBDISCONNETTI #0	
+
+		#FRMSCRIVICELLA #SSRIGHE;$(PCPREZZO);$(RIGAATTIVA);$(PMPART)
+		#CANCELLAMSGSTATO
+	#ENDIF
+#ENDIF

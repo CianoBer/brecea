@@ -1,0 +1,19 @@
+<controlli>
+	<toolbox/>
+	<consolle>
+		<commandbar nomecmdBarOrigine="CommandBarsTeste" nomecmd="Standard" image="ImageManagerTeste">
+			<pulsante testo="Importazione Documentale" img="%EMBPATHSRV%\icons\Errore.ico" id="1" idPannello="1">
+				<controllo progid="CustomControl.ExtensiveDocPane" intestazione="Importazione Documentale" loaded="1" hwnd="529140" icona="%EMBPATHSRV%\icons\Errore.bmp" nome="Obj_1" isCDN="0" widthCDN="0" heightCDN="0" GraphTop="91,2633333333333" GraphLeft="212" ToolTip="Importazione Documentale" Priority="0" HCID="0" SerializedContent="" IniH="0" IniW="0" Position="" Of="">
+					<metodi/>
+					<proprieta/>
+				</controllo>
+			</pulsante>
+		</commandbar>
+		<commandbar nomecmdBarOrigine="CommandBarsRighe" nomecmd="Standard" image="ImageManagerRighe"/>
+		<commandbar nomecmdBarOrigine="CommandBarsPiede" nomecmd="Standard" image="ImageManagerPiede"/>
+	</consolle>
+	<scriptcode>
+		<metodo nome="Form_Load"/>
+		<metodo nome="Form_Unload"/>
+	</scriptcode>
+</controlli>

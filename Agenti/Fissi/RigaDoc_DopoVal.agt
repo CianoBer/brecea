@@ -1,0 +1,148 @@
+// --------------------------------------------------------- //
+// Valorizzazione costo standard e scostamento in righe doc. //
+// --------------------------------------------------------- //
+[VALUTA]
+
+#MODESCLUSIVA
+
+// Scatta solo dopo validazione listino, UM prezzo, quantità gestione, prezzo unitario lordo, sconto e quantità prezzo
+#IF {$(PARAMETRO:0)}=5 | {$(PARAMETRO:0)}=8 | {$(PARAMETRO:0)}=11 | {$(PARAMETRO:0)}=17 | {$(PARAMETRO:0)}=20 | {$(PARAMETRO:0)}=59
+
+	// Recupero riga attiva
+	#LET V_Riga={$(PARAMETRO:3)}
+
+	// Procedura di recupero costo standard e calcolo scostamento
+	#SCRIPT VBScript
+
+		Dim MXUT, frmDoc, objDoc, lngRiga
+		Dim strArt, strUM, dblPrz
+		Dim strFileINI, strIDCosto
+		Dim strQuery, rsSS, dblCosto
+
+		' Impostazione ambiente MXUtil
+		Set MXUT = CreateObject("MXUtil.XUtil")
+
+		' Recupero oggetto documento
+		Set frmMetodo = MXNU.FrmMetodo
+		If (Not frmMetodo is Nothing) Then
+			Set frmDoc = MXNU.FrmMetodo.FormAttiva
+			Set objDoc = MXObjs.GetOggetto("DOCUMENTO")
+			If Not MXUT Is Nothing And Not frmDoc Is Nothing And frmDoc.HelpContextID = 4000 And Not objDoc Is Nothing Then
+	
+				' Recupero riga attiva
+				lngRiga = CLng(AGTVAR.Item("V_Riga"))
+	
+				' Recupero dati articolo necessari da riga
+				strArt = objDoc.RigaAttiva.ValoreCampo(2, lngRiga)
+				strUM = objDoc.RigaAttiva.ValoreCampo(8, lngRiga)
+				dblPrz = CDbl(objDoc.RigaAttiva.ValoreCampo(84, lngRiga))
+	
+				' Recupero ID costo da file INI
+				strFileINI = MXUT.CercaDirFile("ConfigPers.ini", MXNU.PercorsoPers & "\" & MXNU.DittaAttiva & ";" & MXNU.PercorsoPers)
+				strIDCosto = MXNU.LeggiProfilo(strFileINI, "COSTISTDDOC", "IDCosto", "")
+	
+				' Recupero costo standard
+				strQuery = "SELECT ((TCP.CP_MaterialeEuro + TCP.CA_MaterialeEuro + TCP.CP_LavInternaEuro + TCP.CA_LavInternaEuro + TCP.CP_LavEsternaEuro + TCP.CA_LavEsternaEuro + TCP.CP_IndVariabileEuro + TCP.CA_IndVariabileEuro + TCP.CP_IndFissoEuro + TCP.CA_IndFissoEuro)*AFC.Fattore) AS CostoSTD FROM TabCostiProdotto TCP INNER JOIN ArticoliFattoriConversione AFC ON TCP.Articolo=AFC.CodArt AND TCP.UMRif=AFC.UM1 WHERE TCP.Articolo='" & strArt & "' AND TCP.IDCosto='" & strIDCosto & "' AND AFC.UM2='" & strUM & "'"
+				Set rsSS = MXDB.dbCreaSS((hndDBArchivi), strQuery)
+				If MXDB.dbFineTab((rsSS)) Then
+					Call MXDB.dbChiudiSS((rsSS))
+					strQuery = "SELECT ((TCP.CP_MaterialeEuro + TCP.CA_MaterialeEuro + TCP.CP_LavInternaEuro + TCP.CA_LavInternaEuro + TCP.CP_LavEsternaEuro + TCP.CA_LavEsternaEuro + TCP.CP_IndVariabileEuro + TCP.CA_IndVariabileEuro + TCP.CP_IndFissoEuro + TCP.CA_IndFissoEuro)*AFC.Fattore) AS CostoSTD FROM TabCostiProdotto TCP INNER JOIN ArticoliUMPreferite AUP ON TCP.Articolo=AUP.CodArt AND AUP.TipoUM=1 INNER JOIN ArticoliFattoriConversione AFC ON TCP.Articolo=AFC.CodArt AND AUP.UM=AFC.UM1 WHERE TCP.Articolo='" & strArt & "' AND TCP.IDCosto='" & strIDCosto & "' AND AFC.UM2='" & strUM & "'"
+					Set rsSS = MXDB.dbCreaSS((hndDBArchivi), strQuery)
+					If MXDB.dbFineTab((rsSS)) Then
+						dblCosto = 0
+					Else
+						dblCosto = CDbl(MXDB.dbGetCampo((rsSS), rsSS.Tipo, "CostoSTD", 0))
+					End If
+				Else
+					dblCosto = CDbl(MXDB.dbGetCampo((rsSS), rsSS.Tipo, "CostoSTD", 0))
+				End If
+				Call MXDB.dbChiudiSS((rsSS))
+	
+				' Scrittura costo standard e scostamento
+				objDoc.RigaAttiva.ValoreCampo(-12, lngRiga) = CDbl(MXUT.fdec(dblCosto, MXNU.DecimaliEuroUnitario))
+				objDoc.RigaAttiva.ValoreCampo(-13, lngRiga) = CDbl(MXUT.fdec((dblPrz - dblCosto), MXNU.DecimaliEuroUnitario))
+	
+				' Evidenziazione cella scostamento
+				If CLng(objDoc.RigaAttiva.ColonnaRif(-13)) > 0 Then
+					frmDoc.ssRighe.Row = lngRiga
+					frmDoc.ssRighe.Col = objDoc.RigaAttiva.ColonnaRif(-13)
+					If dblPrz > dblCosto Then
+						frmDoc.ssRighe.FontBold = True
+						frmDoc.ssRighe.FontUnderline = True
+					Else
+						frmDoc.ssRighe.FontBold = False
+						frmDoc.ssRighe.FontUnderline = False
+					End If
+				End If
+			End If
+		End If
+		
+		Set rsSS = Nothing
+		Set objDoc = Nothing
+		Set frmDoc = Nothing
+		Set MXUT = Nothing
+
+	#ENDSCRIPT
+#ENDIF
+
+//azzera lo sconto e il codice iva come da configpers.ini (AZZERASCONTO o AZZERASCONTO-CODICIIVA)
+#IF $(PARAMETRO:0)=11 | $(PARAMETRO:0)=20 | $(PARAMETRO:0)=23 | $(PARAMETRO:0)=5
+	#RIFERIMENTOCOLONNA #SSRIGHE;11;COLQTAGEST
+	#RIFERIMENTOCOLONNA #SSRIGHE;20;COLSCONTOESTESI
+	#RIFERIMENTOCOLONNA #SSRIGHE;23;COLCODIVA
+
+	#CERCAFILE ConfigPers.ini;$(PERCORSOMETODO)\Pers\$(DITTAATTIVA);V_File
+	#IF $(V_File)==
+		#CERCAFILE ConfigPers.ini;$(PERCORSOMETODO)\Pers;V_File
+	#ENDIF
+
+	#LEGGIFILEINI $(V_File);AZZERASCONTO;TipiDoc;;V_ElencoDocSC
+	#TRIM V_ElencoDocSC;V_ElencoDocSC;T
+	#LEGGIFILEINI $(V_File);AZZERASCONTO-CODICIIVA;TipiDoc;;V_ElencoDocSCCI
+	#TRIM V_ElencoDocSCCI;V_ElencoDocSCCI;T
+	
+	#CONCATENASTR VIRGOLA;","
+	#CONCATENASTR APVIAP;"','"
+	#SOSTITUISCI V_ElencoDocSC;VIRGOLA;APVIAP;V_ElencoDocSC
+	#SOSTITUISCI V_ElencoDocSCCI;VIRGOLA;APVIAP;V_ElencoDocSCCI
+	
+	#DBCONNETTI #0
+	#DBAPRITAB #0;#1;SELECT * FROM PARAMETRIDOC WHERE CODICE='$(PARAMETRO:4)' AND CODICE IN ('$(V_ElencoDocSC)')
+	#IF $(FINETABELLA)=1
+	#ELSE
+		#FRMSCRIVICELLA #SSRIGHE;$(COLSCONTOESTESI);$(PARAMETRO:3);
+	#ENDIF
+	#DBCHIUDITAB #1
+	
+	#DBAPRITAB #0;#1;SELECT * FROM PARAMETRIDOC WHERE CODICE='$(PARAMETRO:4)' AND CODICE IN ('$(V_ElencoDocSCCI)')
+	#IF $(FINETABELLA)=1
+	#ELSE
+		#FRMSCRIVICELLA #SSRIGHE;$(COLSCONTOESTESI);$(PARAMETRO:3);
+		#FRMSCRIVICELLA #SSRIGHE;$(COLCODIVA);$(PARAMETRO:3);0
+	#ENDIF
+	#DBCHIUDITAB #1
+
+	#DBDISCONNETTI #0
+#ENDIF
+
+// AGENTE PER DOCUMENTI DI TIPO HDP (CONSUNTIVO ORE)
+#IF $(PARAMETRO:4)==HDP 
+	#RIFERIMENTOCOLONNA #SSRIGHE;2;COLCODART
+	#RIFERIMENTOCOLONNA #SSRIGHE;17;COLPREZZOUNITLORDO
+	#RIFERIMENTOCOLONNA #SSRIGHE;60;COLCONTOCDC
+	#IF $(PARAMETRO:0)=11 | $(PARAMETRO:0)=60
+		#FRMLEGGICELLA #SSRIGHE;$(COLCODART);$(PARAMETRO:3);CODART
+		#DBCONNETTI #0
+		#DBAPRITAB #0;#1;SELECT * FROM MET_TABCATSTAT_CDC WHERE  CODICE IN (SELECT CODCATEGORIASTAT FROM ANAGRAFICAARTICOLI WHERE CODICE='$(CODART)')
+		#DBLEGGICAMPO #1;CODICE;CODICECDC
+		#DBLEGGICAMPO #1;VALORE;PREZZOCDC
+		#IF $(FINETABELLA)=1
+		#ELSE
+			#FRMSCRIVICELLA #SSRIGHE;$(COLPREZZOUNITLORDO);$(PARAMETRO:3);$(PREZZOCDC)
+			#FRMSCRIVICELLA #SSRIGHE;$(COLCONTOCDC);$(PARAMETRO:3);$(CODICECDC)
+		#ENDIF
+		#DBCHIUDITAB #1 
+		#DBDISCONNETTI #0
+	#ENDIF
+#ENDIF
+#FINEMODESCLUSIVA

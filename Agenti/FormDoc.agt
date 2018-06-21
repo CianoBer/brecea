@@ -1,0 +1,451 @@
+// -------------------------------------------------------------- //
+// Blocco/sblocco data confermata in base al flag                 //
+//                                                                //
+// Cancellazione percentuali provvigioni in determinati documenti //
+//                                                                //
+// Evidenziazione cella Scostamento se maggiore di 0              //
+//                                                                //
+// Riporto campo extra Origine da parametro documento             //
+// -------------------------------------------------------------- //
+
+
+
+[CONTROLLI]
+
+#form
+#txtb_0
+#tbsel_0
+#txtb_4
+#tbsel_14
+#txtb_2
+#tbsel_2
+#ling_1
+#ssrighe
+#ling_2
+
+
+
+[FORM_LOAD]
+
+// Inizializzazione flag modifica Origine
+#LET intModOrig=0
+
+
+
+[FORM_AFTER_INSERT]
+
+// Reset flag modifica Origine
+#LET intModOrig=0
+
+[FORM_BEFORE_SAVE]
+#MODESCLUSIVA
+	#DBCONNETTI #0
+		#FRMLEGGICAMPOSTR #TXTB_2;CODCLIFOR
+		#DBAPRITAB #0;#1;SELECT * FROM EXTRACLIENTI WHERE CODCONTO='$(CODCLIFOR)' 
+			#DBLEGGICAMPO #1;INVIOMAIL_CLI;INVIOMAIL_CLI
+		#DBCHIUDITAB #1 
+
+		#FRMLEGGICAMPOSTR #TXTB_0;TIPODOC
+		#DBAPRITAB #0;#1;SELECT * FROM EXTRAPARDOC WHERE CODICE='$(TIPODOC)'
+			#DBLEGGICAMPO #1;INVIOMAIL_DOC;INVIOMAIL_DOC 
+		#DBCHIUDITAB #1 
+		#LET INVIA={$(INVIOMAIL_CLI)+$(INVIOMAIL_DOC)}
+
+		#IF $(INVIA)>1
+			#MESSAGGIO 16;Questo documento è da inviare via Mail al cliente!!;ATTENZIONE!
+		#ENDIF
+	#DBDISCONNETTI #0
+#FINEMODESCLUSIVA
+
+[FORM_AFTER_SAVE]
+
+// Reset flag modifica Origine
+#LET intModOrig=0
+
+
+
+[FORM_AFTER_DELETE]
+
+// Reset flag modifica Origine
+#LET intModOrig=0
+
+
+
+[TXTB_0_LOSTFOCUS]
+
+//procedura per assegnazione fornitore azienda nei documenti di trasferimento interno
+#FRMLEGGICAMPOSTR #TXTB_0;TIPODOC
+
+#LETS FORN=F   131
+#IF $(TIPODOC)==BTC
+	#FRMSCRIVICAMPOSTR #TXTB_2;$(FORN)
+#ELSEIF $(TIPODOC)==CTB
+	#FRMSCRIVICAMPOSTR #TXTB_2;$(FORN)
+#ENDIF
+
+// Reset flag modifica Origine in uscita tipo documento
+#LET intModOrig=0
+
+
+
+[TBSEL_0_AFTER_CLICK]
+
+// Reset flag modifica Origine dopo selezione tipo documento
+#LET intModOrig=0
+
+
+
+[TXTB_4_LOSTFOCUS]
+
+// Reset flag modifica Origine in uscita numero documento
+#LET intModOrig=0
+
+
+
+[TBSEL_14_AFTER_CLICK]
+
+// Reset flag modifica Origine dopo selezione numero documento
+#LET intModOrig=0
+
+
+
+[TXTB_2_GOTFOCUS]
+
+#FRMLEGGICAMPOSTR #TXTB_0;TIPODOC
+#IF $(TIPODOC)==HDP
+	#DBCONNETTI #0
+	#DBAPRITAB #0;#1;SELECT * FROM TABVINCOLIPRODUZIONE
+	#DBLEGGICAMPOSTR #1;CODFOR;CODFOR
+	#IF $(FINETABELLA)=1
+	#ELSE
+		#FRMSCRIVICAMPOSTR #TXTB_2;$(CODFOR)
+	#ENDIF
+	#DBCHIUDITAB #1 
+	#DBDISCONNETTI #0
+#ENDIF
+
+
+
+[TXTB_2_LOSTFOCUS]
+
+//procedura per assegnazione destinazione merce nei documenti di trasferimento interno
+#LETT DESTDIVBTC=1
+#LETT DESTDIVCTB=0
+#IF $(TIPODOC)==BTC
+	#FRMSCRIVICAMPO #TXTB_23;$(DESTDIVBTC)
+#ELSEIF $(TIPODOC)==CTB
+	#FRMSCRIVICAMPO #TXTB_23;$(DESTDIVCTB)
+#ENDIF
+
+// Recupero tipo documento
+#FRMLEGGICAMPOSTR #txtb_0;V_Doc
+
+// Recupero file configurazione
+#CERCAFILE ConfigPers.ini;$(PERCORSOMETODO)\Pers\$(DITTAATTIVA);V_File
+#IF $(V_File)==
+	#CERCAFILE ConfigPers.ini;$(PERCORSOMETODO)\Pers;V_File
+#ENDIF
+
+// Verifica se per il documento si devono azzerare le provvigioni
+#LEGGIFILEINI $(V_File);AZZERAPROVVDOC;TipiDoc;;V_ElencoDoc
+#TRIM V_ElencoDoc;V_ElencoDoc;T
+#LET V_Azzera=0
+#IF NOT($(V_ElencoDoc)==)
+	#LET V_Cont=0
+	#DO
+		#IF $(V_ElencoDoc:$(V_Cont))==$(V_Doc)
+			#LET V_Azzera=1
+		#ENDIF
+		#EXIT $(V_ElencoDoc:$(V_Cont))==$(V_Doc)
+
+		#LET V_Cont={$(V_Cont)+1}
+	#LOOP $(V_ElencoDoc:$(V_Cont))==
+#ENDIF
+
+// Azzera le provvigioni
+#IF {$(V_Azzera)}=1
+	#FRMSCRIVICAMPO #txtb_10;0
+	#FRMSCRIVICAMPO #txtb_54;0
+	#FRMSCRIVICAMPO #txtb_11;0
+	#FRMSCRIVICAMPO #txtb_55;0
+	#FRMSCRIVICAMPO #txtb_3;0
+	#FRMSCRIVICAMPO #txtb_56;0
+#ENDIF
+
+
+
+[TBSEL_2_AFTER_CLICK]
+
+// Recupero tipo documento
+#FRMLEGGICAMPOSTR #txtb_0;V_Doc
+
+// Recupero file configurazione
+#CERCAFILE ConfigPers.ini;$(PERCORSOMETODO)\Pers\$(DITTAATTIVA);V_File
+#IF $(V_File)==
+	#CERCAFILE ConfigPers.ini;$(PERCORSOMETODO)\Pers;V_File
+#ENDIF
+
+// Verifica se per il documento si devono azzerare le provvigioni
+#LEGGIFILEINI $(V_File);AZZERAPROVVDOC;TipiDoc;;V_ElencoDoc
+#TRIM V_ElencoDoc;V_ElencoDoc;T
+#LET V_Azzera=0
+#IF NOT($(V_ElencoDoc)==)
+	#LET V_Cont=0
+	#DO
+		#IF $(V_ElencoDoc:$(V_Cont))==$(V_Doc)
+			#LET V_Azzera=1
+		#ENDIF
+		#EXIT $(V_ElencoDoc:$(V_Cont))==$(V_Doc)
+
+		#LET V_Cont={$(V_Cont)+1}
+	#LOOP $(V_ElencoDoc:$(V_Cont))==
+#ENDIF
+
+// Azzera le provvigioni
+#IF {$(V_Azzera)}=1
+	#FRMSCRIVICAMPO #txtb_10;0
+	#FRMSCRIVICAMPO #txtb_54;0
+	#FRMSCRIVICAMPO #txtb_11;0
+	#FRMSCRIVICAMPO #txtb_55;0
+	#FRMSCRIVICAMPO #txtb_3;0
+	#FRMSCRIVICAMPO #txtb_56;0
+#ENDIF
+
+
+
+[LING_1_GOTFOCUS]
+
+//controllo documenti di trasferimento in prelievo
+#FRMLEGGICAMPOSTR #TXTB_0;TIPODOC
+#IF $(TIPODOC)==CTB
+//#MESSAGGIO 0;PARTO
+	#LETT DESTDIVCTB=0
+	#FRMSCRIVICAMPO #TXTB_23;$(DESTDIVCTB)
+#ENDIF
+
+// Sblocco data confermata nelle righe con il flag attivo al passaggio alla linguetta righe
+// ed evidenziazione cella scostamento
+
+#MODESCLUSIVA
+
+#RIFERIMENTOCOLONNA #ssRighe;-2;V_ColFlag
+#RIFERIMENTOCOLONNA #ssRighe;-3;V_ColDtConf
+#RIFERIMENTOCOLONNA #ssRighe;-13;V_ColScost
+#IF	{$(V_ColFlag)}>0 & {$(V_ColDtConf)}>0 & {$(V_ColScost)}>0
+	#SCRIPT VBScript
+
+	    Dim frmDoc, vetParam, objDoc, I
+
+	    ' Recupero oggetto documenti
+	    Set frmDoc = MXNU.FrmMetodo.FormAttiva
+	    If Not frmDoc Is Nothing And frmDoc.HelpContextID = 4000 Then
+	        Set vetParam = VBCollection
+	        Call frmDoc.AzioniMetodo(13, vetParam)
+	        If Not vetParam Is Nothing Then
+	            Set objDoc = vetParam(6)
+
+	            ' Ciclo lettura righe presenti
+	            If CLng(objDoc.NumeroRighe) > 0 Then
+	                For I = 1 To CLng(objDoc.NumeroRighe)
+
+			            ' Se flag attivo in riga, sblocca il campo della data confermata
+	                    If CLng(objDoc.RigaAttiva.ColonnaRif(-2)) > 0 And CLng(objDoc.RigaAttiva.ColonnaRif(-3)) > 0 Then
+							If CInt(objDoc.RigaAttiva.ValoreCampo(-2, I)) = 1 Then
+
+								' Sblocco campo data confermata
+								frmDoc.ssRighe.Row = I
+								frmDoc.ssRighe.Col = objDoc.RigaAttiva.ColonnaRif(-3)
+								frmDoc.ssRighe.Lock = False
+							End If
+	                    End If
+
+						' Evidenziazione cella scostamento se maggiore di 0
+						If CLng(objDoc.RigaAttiva.ColonnaRif(-13)) > 0 Then
+							If CDbl(objDoc.RigaAttiva.ValoreCampo(-13, I)) > 0 Then
+								frmDoc.ssRighe.Row = I
+								frmDoc.ssRighe.Col = objDoc.RigaAttiva.ColonnaRif(-13)
+								frmDoc.ssRighe.FontBold = True
+								frmDoc.ssRighe.FontUnderline = True
+							End If
+						End If
+	                Next
+	            End If
+	        End If
+	    End If
+
+	    Set objDoc = Nothing
+	    Set vetParam = Nothing
+	    Set frmDoc = Nothing
+
+	#ENDSCRIPT
+#ENDIF
+
+#FINEMODESCLUSIVA
+
+//Aggiunta del 15/06/09 - RGabriele
+//Eliminazione file temp per ricalcolo data consegna Ricambi
+	#SCRIPT VbScript
+		strDirTemp=MXNU.GetTempDir()
+
+		On Error Resume Next
+		AGTVAR.Remove "V_strDirTemp"
+		AGTVARNOME.Remove "V_strDirTemp"
+
+		On Error Goto 0
+
+		AGTVAR.Add strDirTemp, "V_strDirTemp"
+		AGTVARNOME.Add "V_strDirTemp", "V_strDirTemp"
+
+	#ENDSCRIPT
+
+#FRMLEGGICAMPOSTR #txtb_0;V_Doc
+
+#LETS NOMEFILETEMP=MW_TEMP_$(V_Doc)_$(NRTERMINALE).TMP
+
+#CERCAFILE $(NOMEFILETEMP);$(V_strDirTemp);TROVATO
+
+#IF $(TROVATO)==
+#ELSE
+	#CANCELLAFILE $(V_strDirTemp)\$(NOMEFILETEMP)
+#ENDIF
+//Fine aggiunte del 15/06/09 - RGabriele
+
+
+
+[SSRIGHE_BUTTONCLICKED]
+
+// Blocca/sblocca data confermata in base al flag
+#MODESCLUSIVA
+
+// Continua se cliccato il flag
+#RIFERIMENTOCOLONNA #ssRighe;1;lngColTpRg
+#RIFERIMENTOCOLONNA #ssRighe;-1;V_ColDtRic
+#RIFERIMENTOCOLONNA #ssRighe;-2;V_ColFlag
+#RIFERIMENTOCOLONNA #ssRighe;-3;V_ColData
+#IF	{$(COLONNAATTIVA)}={$(V_ColFlag)} & {$(V_ColDtRic)}>0 & {$(V_ColFlag)}>0 & {$(V_ColData)}>0
+	#LET V_Riga={$(RIGAATTIVA)}
+
+	// Blocco/sblocco campo data confermata
+	#FRMLEGGICELLA #ssRighe;{$(V_ColFlag)};{$(V_Riga)};V_Flag
+	#IF	{$(V_Flag)}=1
+
+		// Verifica se è stata cliccato nella prima riga, in tal caso sblocca tutte le righe
+		#IF {$(V_Riga)}=1
+			#FRMGRIGLIA #ssrighe;-1;-1;-4
+			#LET lngRFine={$(RIGHEFOGLIO)}
+		#ELSE
+			#LET lngRFine={$(V_Riga)}
+		#ENDIF
+		#DO
+			#FRMLEGGICELLA #ssRighe;{$(lngColTpRg)};{$(V_Riga)};strTpRg
+			#PARTESTR strTpRg;1;1;strTpRg
+			#IF $(strTpRg)==D | $(strTpRg)==R
+			#ELSE
+				#FRMGRIGLIA #ssRighe;{$(V_ColData)};{$(V_Riga)};-2
+				#FRMSCRIVICELLA #ssRighe;{$(V_ColFlag)};{$(V_Riga)};1
+			#ENDIF
+
+			#LET V_Riga={$(V_Riga)+1}
+		#LOOP {$(V_Riga)}>{$(lngRFine)}
+	#ELSE
+		#FRMGRIGLIA #ssRighe;{$(V_ColData)};{$(V_Riga)};-1
+		#FRMGRIGLIA #ssRighe;{$(V_ColData)};{$(V_Riga)};12
+
+		// Rivalorizzazione data di consegna
+		#SCRIPT VBScript
+
+		    Dim frmDoc, vetParam, objDoc, lngColData, lngRiga
+
+		    ' Recupero oggetto documenti
+		    Set frmDoc = MXNU.FrmMetodo.FormAttiva
+		    If Not frmDoc Is Nothing And frmDoc.HelpContextID = 4000 Then
+		        Set vetParam = VBCollection
+		        Call frmDoc.AzioniMetodo(13, vetParam)
+		        If Not vetParam Is Nothing Then
+		            Set objDoc = vetParam(6)
+
+		            ' Recupero riga attiva
+		            lngRiga = CLng(AGTVAR.Item("V_Riga"))
+
+		            ' Imposta la data di consegna
+					If CLng(objDoc.RigaAttiva.ColonnaRif(-1)) > 0 Then
+						If objDoc.RigaAttiva.ValoreCampo(-1, lngRiga) = "31/12/1899" Or Trim(objDoc.RigaAttiva.ValoreCampo(-1, lngRiga)) = "" Then
+							If lngRiga = 1 Then
+								objDoc.RigaAttiva.ValoreCampo(6, lngRiga) = objDoc.xTDoc.GrInput("DATADOC").ValoreCorrente
+							Else
+								objDoc.RigaAttiva.ValoreCampo(6, lngRiga) = objDoc.RigaAttiva.ValoreCampo(6, lngRiga - 1)
+							End If
+						Else
+							objDoc.RigaAttiva.ValoreCampo(6, lngRiga) = objDoc.RigaAttiva.ValoreCampo(-1, lngRiga)
+						End If
+			        End If
+		        End If
+		    End If
+
+		    Set objDoc = Nothing
+		    Set vetParam = Nothing
+		    Set frmDoc = Nothing
+
+		#ENDSCRIPT
+	#ENDIF
+#ENDIF
+
+#FINEMODESCLUSIVA
+
+
+
+[LING_2_GOTFOCUS]
+
+//procedura per assegnazione campi piede nei documenti di trasferimento interno
+#LETS ASPBENI=A VISTA
+#LET TRASPACURA=3
+#LET CAUTRABTC=32
+#LET CAUTRACTB=33
+
+#IF $(TIPODOC)==BTC
+	#FRMSCRIVICELLA #SSPIEDEG;2;1;$(TRASPACURA)
+	#FRMSCRIVICELLA #SSPIEDEG;2;2;$(CAUTRABTC)
+	#FRMSCRIVICELLA #SSPIEDEG;2;5;$(ASPBENI)
+#ELSEIF $(TIPODOC)==CTB
+	#FRMSCRIVICELLA #SSPIEDEG;2;1;$(TRASPACURA)
+	#FRMSCRIVICELLA #SSPIEDEG;2;2;$(CAUTRACTB)
+	#FRMSCRIVICELLA #SSPIEDEG;2;5;$(ASPBENI)
+#ENDIF
+
+// Riporto dell'Origine da parametro documento
+#MODESCLUSIVA
+
+// Continua solo se non ancora eseguita la modifica, se esiste il campo origine nel piede e si si è in inserimento
+#RIFERIMENTORIGA #ssPiedeG;-2;intPosOrig
+#TITOLOFINESTRA strTitolo
+#IF {$(intModOrig)}=0 & {$(intPosOrig)}>0 & $(strTitolo)==Inserimento Documenti
+
+	// Verifica che non ci sia già un valore nel campo Origine
+	#FRMLEGGICELLA #ssPiedeG;4;{$(intPosOrig)};strOrig
+	#TRIM strOrig;strOrig;T
+	#IF $(strOrig)==
+
+		// Apertura connessione database
+		#DBCONNETTI #0
+
+		// Recupero origine da parametro documento
+		#FRMLEGGICAMPOSTR #txtb_0;strTipoDoc
+		#DBAPRITAB #0;#1;SELECT Origine FROM ExtraParDoc WHERE Codice='$(strTipoDoc)' AND Origine IS NOT NULL AND Origine<>''
+		#IF {$(FINETABELLA)}=1
+		#ELSE
+
+			// Riporta nel piede l'origne letta
+			#DBLEGGICAMPOSTR #1;Origine;strOrig
+			#FRMSCRIVICELLA #ssPiedeG;4;{$(intPosOrig)};$(strOrig)
+		#ENDIF
+		#DBCHIUDITAB #1
+
+		// Chiusura connessione database
+		#DBDISCONNETTI #0
+	#ENDIF
+#ENDIF
+
+// Reset flag modifica Origine
+#LET intModOrig=1
+
+#FINEMODESCLUSIVA

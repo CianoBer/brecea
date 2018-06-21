@@ -1,0 +1,104 @@
+// =============================================================================
+// Cliente:	Brevetti CEA
+// Agente:	ExportPDF
+// Azione:	esportazione documenti in cartella predefinita in formato PDF
+// Data:	.
+// Build:	.
+// S-dev.:	Ciano
+// =============================================================================
+
+//	nome file composto: 
+//	codicefornitore_annotipodocnrdoc_totnettoimponibile 
+//	(es.: C756_18OFA565_2500.75.pdf)
+
+[VALUTA]
+
+#chr 13;cr
+#chr 44;virg
+
+// filtro di selezione...
+#stampa stp_docpdf;1;1565312
+#DisabilitaValutazione 1
+#lets queryfiltro=$(PARAMETRO)
+#lets ditta=$(dittaattiva)
+
+#if $(PARAMETRO)==
+	#messaggio 0;Non è stata effettuata nessuna selezione;Export Documenti PDF Brevetti CEA
+#else
+
+	#dbconnetti #0
+		// conta dei record
+		#dbapritab #0;#1;select count(*) as contatore from testedocumenti LEFT OUTER JOIN EXTRATESTEDOC ON IDTESTA = TESTEDOCUMENTI.PROGRESSIVO where $(parametro)
+			#dbleggicampo #1;contatore;contatore
+		#dbchiuditab #1
+
+		#if $(contatore)>0
+
+			// eventuale messaggio di conferma elaborazione record
+			#messaggio 4;Effettuo l'esportazione di $(contatore) documenti PDF?;Export Documenti PDF Brevetti CEA
+
+			#if $(rispostamessaggio)=6
+				#dbapritab #0;#1;SELECT PROGRESSIVO, Concat (Replace (CODCLIFOR, ' ', ''), '_', Right(ESERCIZIO, 2), TIPODOC, NUMERODOC, '_', Cast(TOTIMPONIBILEEURO AS int), '.PDF') AS NomeFile, MODULOSTAMPA FROM TESTEDOCUMENTI LEFT OUTER JOIN EXTRATESTEDOC ON IDTESTA = TESTEDOCUMENTI.PROGRESSIVO LEFT OUTER JOIN PARAMETRIDOC ON TIPODOC = CODICE where $(parametro)
+
+				#if $(finetabella)=1
+				#else
+					#do
+
+						#dbleggicampo #1;progressivo;progressivo
+						#dbleggicampostr #1;nomefile;nomefile
+						#dbleggicampostr #1;modulostampa;modulostampa
+						
+						
+						#script vbscript					
+							Dim objFT 'As MXKit.CFiltro
+							Dim MobjCRW 'As MXKit.CCrw
+
+							set MXFT = MXAA.GetAmbiente("MXFT")
+							Set objFT = MXFT.CreaCFiltro()
+							Call objFT.InizializzaFiltro
+
+							objFT.SettaSQLFiltro " testedocumenti.progressivo = " & AGTVAR.Item("progressivo")
+
+							set MXCREP = MXAA.GetAmbiente("MXCREP")
+							Set MobjCRW = MXCREP.CreaCCrw()
+
+							MobjCRW.ClearOpzioniStp
+							MobjCRW.Stampante.nCopie = 1
+							MobjCRW.Filerpt = AGTVAR.Item("modulostampa")
+							MobjCRW.Periferica = "File"
+							MobjCRW.FormatoStampaSuFile = 31
+							MobjCRW.Stampante.dmOrientation = 2
+							'MobjCRW.FileOutPut = agtvar.item("exp_folder") & "\" & agtvar.item("ditta") & "_" & agtvar.item("progressivo") & "_" & agtvar.item("esercizio") & "_" & agtvar.item("tipodoc") & "_" & agtvar.item("numerodoc") & ".pdf"
+							
+							'msgbox agtvar.item("percorso") & "\" & agtvar.item("nomefile")
+							
+							MobjCRW.FileOutPut = agtvar.item("percorso") & "\" & agtvar.item("nomefile")
+							q = MobjCRW.Stampa((objFT), Nothing, False)
+
+							Set MobjCRW = Nothing
+							Set objFT = Nothing
+							Set MXFT = Nothing
+							Set MXCREP = Nothing
+
+						#endscript					
+						
+						#dbeseguisql #0;update extratestedoc set ExportPDF='S' where idtesta=$(progressivo)
+						
+						#dbsuccessivo #1
+					#loop $(finetabella)=1
+
+				#endif
+				#dbchiuditab #1
+
+				#messaggio 0;Elaborazione Terminata;Export Documenti PDF Brevetti CEA
+			#else
+				#messaggio 0;Procedura annullata;Export Documenti PDF Brevetti CEA
+			#endif
+		#else
+			#messaggio 0;Nessun documento da elaborare;Export Documenti PDF Brevetti CEA
+		#endif
+	#dbdisconnetti #0
+
+#endif
+
+#DisabilitaValutazione 0

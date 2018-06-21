@@ -1,0 +1,44 @@
+// --------------------------------------------------------------------- //
+// Cancellazione ubicazioni su ordini ed impegni e relativi movimenti di //
+// magazzino dopo salvataggio commessa di produzione                     //
+// --------------------------------------------------------------------- //
+
+
+
+[VALUTA]
+
+// La procedura parte solo in salvataggio diretto della commessa di produzione, non in modifica da movimentazione di produzione
+
+//#IF	$(PARAMETRO:1)==INS
+
+	// Recupero ID testa commessa produzione
+
+	#LET V_IDTesta={$(PARAMETRO:0)}
+
+	// Apertura connessione database
+
+	#DBCONNETTI #0
+
+	// Verifica esistenza testa commessa di produzione e lettura dati necessari dalla stessa
+
+	#DBAPRITAB #0;#1;SELECT Esercizio, TipoCom, NumeroCom FROM TesteOrdiniProd WHERE Progressivo={$(V_IDTesta)}
+	#IF	{$(FINETABELLA)}=1
+	#ELSE
+		#DBLEGGICAMPO #1;Esercizio;V_Esercizio
+		#DBLEGGICAMPOSTR #1;TipoCom;V_TipoCom
+		#DBLEGGICAMPO #1;NumeroCom;V_NumeroCom
+
+		// Azzeramento campi ubicazione su ordini, impegni e relativi movimenti di magazzino
+
+		#DBESEGUISQL #0;UPDATE RigheOrdProd SET Ubicazione='', UbicazioneColl='' WHERE IDTesta={$(V_IDTesta)}
+		#DBESEGUISQL #0;UPDATE ImpegniOrdProd SET Ubicazione='', UbicazioneColl='' WHERE IDTesta={$(V_IDTesta)}
+		#DBESEGUISQL #0;UPDATE StoricoMag SET CodUbicazione='' WHERE CodUbicazione<>''
+	#ENDIF
+	#DBCHIUDITAB #1
+
+	// RICALCOLO DATA FINE RICHIESTA IN BASE AI VINCOLI DI PRODUZIONE SE L'ARTICOLO E' DI PRODUZIONE E I TEMPI IN ANAGRAFICAARTICOLIPROD SONO A 0
+	#DBESEGUISQL #0;UPDATE RIGHEORDPROD SET DATAFINERICH=M.NEWDATAFINERICH FROM RIGHEORDPROD AS R INNER JOIN MET_VISTA_RICALCDATAFINERICH M ON R.IDTESTA=M.IDTESTA AND R.IDRIGA=M.IDRIGA WHERE R.IDTESTA=$(PARAMETRO:0)
+	
+	// Chiusura connessione database	
+	#DBDISCONNETTI #0
+//#ENDIF

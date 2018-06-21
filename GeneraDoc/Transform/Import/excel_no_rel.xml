@@ -1,0 +1,18 @@
+<transform>
+	<dataType>excel</dataType> 
+	<eofColumn testValue="">A</eofColumn>
+	<skipColumn testValue="">C</skipColumn>
+	<excelSheetName>Foglio1</excelSheetName>
+	<startRow>2</startRow>
+	<descrRow>
+		<colTest id="1" value="" />
+		<colTest id="5" value="not blank" />
+		<colTest id="2" value="0" />
+		<colValue id="0" />
+		<skip>true</skip>
+	</descrRow>	
+	<colums>
+		<col id="1" mapid="2" type="text" name="C" />
+		<col id="2" mapid="11" type="decimal" name="H" /> 
+	</colums>
+</transform>

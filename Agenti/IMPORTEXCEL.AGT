@@ -1,0 +1,161 @@
+[VALUTA]
+#LETS FILE = "M:\RELAZIONI\relazioni.xls"
+//#LETS FILE = "d:\METODOEVOLUS_80200\pers\brevcea2\RELAZIONI\RELAZIONI.xls"
+
+#SCRIPT VBSCRIPT
+//per PROVE in metodo
+'	Server = "TOP64-SRV"
+'	Database = "BREVCEA2"
+'	File = AGTVAR.Item("FILE")
+
+//per brevetti
+	File = AGTVAR.Item("FILE")	
+	Server = "SRVERP01"
+	Database = "BRECEA"
+	UtenteLavoro = "SA"
+	PwdUtenteLavoro = "sqlmetodo"
+	
+	UtenteLavoro1 = "trm150"
+	PwdUtenteLavoro1 = "terminale"
+	
+
+	DSN = "driver={SQL Server};database=" & Database & ";server=" & Server & ";uid=" & UtenteLavoro & ";pwd=" & PwdUtenteLavoro
+	Set dbconn = CreateObject("ADODB.connection")
+	dbconn.ConnectionString = DSN
+	dbconn.CursorLocation = 2 'adUseServer
+	dbconn.Mode = 3
+	dbconn.open
+	
+	DSN1 = "driver={SQL Server};database=" & Database & ";server=" & Server & ";uid=" & UtenteLavoro1 & ";pwd=" & PwdUtenteLavoro1
+	Set dbconn1 = CreateObject("ADODB.connection")
+	dbconn1.ConnectionString = DSN1
+	dbconn1.CursorLocation = 2 'adUseServer
+	dbconn1.Mode = 3
+	dbconn1.open
+
+	'Pulisco la teblla personalizzata
+	metSQL = "DELETE FROM MET_RICAMBICLIENTI"
+	dbconn.execute metSQL
+	metSQL = "IF EXISTS (SELECT 1 FROM SYSOBJECTS WHERE ID = OBJECT_ID('XLIMPORT9') AND TYPE = 'U') DROP TABLE XLIMPORT9"
+	dbconn.execute metSQL
+
+	'Faccio la connessione al file Excel
+	Set cn = CreateObject("ADODB.Connection")
+	cn.open "Provider=Microsoft.Jet.OLEDB.4.0;" & _
+		"Data Source=" & File & ";" & _
+		"Extended Properties=Excel 8.0"
+
+	'Importo i dati di Excel in una Tabella temporanea di SQL
+	strSQL = "SELECT * INTO [odbc;Driver={SQL Server};" & _
+		"Server=" & Server & ";Database=" & Database & ";" & _
+		"UID=" & UtenteLavoro & ";PWD=" & PwdUtenteLavoro & "].XLImport9 " & _
+		"FROM [FOGLIO1$]"
+	cn.execute strSQL 
+	
+	'Inserisco i dati importati nella Tabella personalizzata
+	metSQL = "INSERT INTO MET_RICAMBICLIENTI(CODCLIFOR,COMPOSTO,COMPONENTE,FLGCOMPOSTO,FLGCOMPONENTE,ALTERNATIVO) " & _
+			"(SELECT DISTINCT CODCLIFOR,MATRMACCHINA,ARTICOLO,0,0,'' FROM XLIMPORT9 WHERE CODCLIFOR IS NOT NULL OR CODCLIFOR='')"
+	dbconn.execute metSQL
+
+	'Elimino la Tabella temporanea di importazione da Excel
+	metSQL = "IF EXISTS (SELECT 1 FROM SYSOBJECTS WHERE ID = OBJECT_ID('XLIMPORT9') AND TYPE = 'U') DROP TABLE XLIMPORT9"
+	dbconn.execute metSQL
+
+	'Controllo se i codici Macchina sono del cliente che mi sta chiedendo i ricambi
+	metSQL = "UPDATE ME SET FLGCOMPOSTO=1 FROM MET_RICAMBICLIENTI ME WHERE ME.COMPOSTO IN " & _
+			"(SELECT MV.CODART FROM MET_VISTAMACCHINECLI AS MV WHERE MV.CODCLIFOR=ME.CODCLIFOR AND MV.CODART=ME.COMPOSTO)"
+	dbconn.execute metSQL
+
+	'Procedura per il controllo dei componenti (se sono presenti nella distinta della Macchina del cliente)
+	Set rs = dbconn.execute("SELECT DISTINCT COMPOSTO FROM MET_RICAMBICLIENTI")
+	rs.MoveFirst
+	Do until rs.EOF
+		Macchina = rs.Fields("COMPOSTO").Value
+		metSQL = "EXEC DBO.MET_ESPLODIDBA '" & Macchina & "'"
+		dbconn.execute metSQL
+		metSQL = "UPDATE MET_RICAMBICLIENTI SET FLGCOMPONENTE=1 FROM MET_RICAMBICLIENTI AS MR INNER JOIN " & _
+				"MET_TEMPESPLODIDBA AS MD ON MR.COMPOSTO=MD.MATRMACCHINA AND MR.COMPONENTE=MD.CODCOMPONENTE"
+		dbconn.execute metSQL
+		rs.MoveNext
+	Loop
+	rs.Close
+	Set rs = Nothing
+
+	'procedura di ricerca codice ALTERNATIVO per articoli esauriti
+	metSQL = "UPDATE MET_RICAMBICLIENTI SET ALTERNATIVO=(SELECT TOP 1 ALTERNATIVO from MET_TROVAALTERNATIVO WHERE COD=MET_RICAMBICLIENTI.COMPONENTE ORDER BY LIVELLO DESC) " 
+	dbconn1.execute metSQL
+
+	'Procedura per il controllo degli alternativi (se sono presenti nella distinta della Macchina del cliente)
+	metSQL = "UPDATE MET_RICAMBICLIENTI SET FLGALTERNATIVO=1 WHERE MET_RICAMBICLIENTI.ALTERNATIVO NOT IN " & _
+			"(SELECT ME.ALTERNATIVO FROM MET_RICAMBICLIENTI AS ME LEFT OUTER JOIN MET_VISTAMACCHINECLI AS MV ON MV.CODCLIFOR=ME.CODCLIFOR AND MV.CODART=ME.COMPOSTO)"
+	dbconn.execute metSQL
+
+	'Procedura per il controllo dei componenti (se sono RICAMBI)
+	metSQL = "UPDATE MET_RICAMBICLIENTI SET VERRICAMBIO=(SELECT VERRICAMBIO FROM EXTRAMAG WHERE CODART=MET_RICAMBICLIENTI.COMPONENTE)"
+	dbconn.execute metSQL
+
+	'Procedura per il controllo dei componenti (se sono RICAMBI)
+	metSQL = "UPDATE MET_RICAMBICLIENTI SET VERRICAMBIO=(SELECT VERRICAMBIO FROM EXTRAMAG WHERE CODART=MET_RICAMBICLIENTI.ALTERNATIVO) WHERE ALTERNATIVO<>''"
+	dbconn.execute metSQL
+
+	'Aggiorno il foglio Excel per le Macchine (se sono del cliente=0 o no=1)
+	strSQL="UPDATE [FOGLIO1$] SET FLGMACCHINA=1 WHERE MATRMACCHINA IN (SELECT DISTINCT COMPOSTO FROM " & _
+			"[odbc;Driver={SQL Server};" & _
+			"Server=" & Server & ";Database=" & Database & ";" & _
+			"UID=" & UtenteLavoro & ";PWD=" & PwdUtenteLavoro & "].MET_RICAMBICLIENTI WHERE FLGCOMPOSTO=0)"
+	cn.execute strSQL 
+	
+	'Aggiorno il foglio Excel per i componenti (se sono della distinta=0 o no=1)
+	strSQL="UPDATE [FOGLIO1$] SET FLGCOMPONENTE=1 WHERE ARTICOLO IN (SELECT DISTINCT COMPONENTE FROM " & _
+			"[odbc;Driver={SQL Server};" & _
+			"Server=" & Server & ";Database=" & Database & ";" & _
+			"UID=" & UtenteLavoro & ";PWD=" & PwdUtenteLavoro & "].MET_RICAMBICLIENTI WHERE FLGCOMPONENTE=0)"
+	cn.execute strSQL 
+
+	'Aggiorno il foglio Excel gli articoli esauriti con l'articolo alternativo
+	Set RSX = dbconn.execute("SELECT * FROM MET_RICAMBICLIENTI")
+	RSX.MoveFirst
+	Do until RSX.EOF
+		strSQL="UPDATE [FOGLIO1$] SET ALTERNATIVO='" & RSX.Fields("ALTERNATIVO").Value & "'" & _
+				" ,RICAMBIO='" & RSX.Fields("VERRICAMBIO").Value & "'" & _
+				" WHERE ARTICOLO='" & RSX.Fields("COMPONENTE").Value & "'"
+		cn.execute strSQL 
+		RSX.MoveNext
+	Loop
+	RSX.Close
+	Set RSX = Nothing
+
+	'Aggiorno il foglio Excel per Articoli Alternativi (se sono del cliente=0 o no=1)
+	strSQL="UPDATE [FOGLIO1$] SET FLGALTERNATIVO=1 WHERE ALTERNATIVO IN (SELECT DISTINCT ALTERNATIVO FROM " & _
+			"[odbc;Driver={SQL Server};" & _
+			"Server=" & Server & ";Database=" & Database & ";" & _
+			"UID=" & UtenteLavoro & ";PWD=" & PwdUtenteLavoro & "].MET_RICAMBICLIENTI WHERE FLGALTERNATIVO=0)"
+	cn.execute strSQL 
+
+'	Set cnExp = CreateObject("ADODB.Connection")
+		
+'		cnExp.open "Provider=Microsoft.Jet.OLEDB.4.0;" & _
+'			"Data Source=" & FileExp & ";" & _
+'			"Extended Properties=Excel 8.0"
+		
+'	SQLExp = "SELECT * INTO RISULTATI FROM " & _
+'			"[odbc;Driver={SQL Server};" & _
+'			"Server=" & Server & ";Database=" & Database & ";" & _
+'			"UID=" & UtenteLavoro & ";PWD=" & PwdUtenteLavoro & "].MET_RICAMBICLIENTI WHERE FLGCOMPONENTE=0"
+'	cnExp.execute SQLExp
+	
+'	cnExp.Close
+'	Set cnExp = Nothing
+
+	cn.Close
+	dbconn.Close
+	dbconn1.Close
+	Set cn = Nothing
+	Set dbconn = Nothing
+	Set dbconn1 = Nothing
+	MsgBOX "Procedura conclusa correttamente!"
+#ENDSCRIPT
+
+//Apro il file Excel aggiornato
+#EXE EXPLORER $(FILE);1
+//#EXE EXPLORER $(FILEEXP);4

@@ -1,0 +1,16 @@
+<transform>
+	<dataType>text</dataType> 
+	<descrRow>
+		<colTest id="1" value="" />
+		<colTest id="3" value="not blank" />
+		<colTest id="5" value="0" />
+		<skip>false</skip>
+	</descrRow>	
+	<colums>
+		<col id="1" mapid="2" type="text" start="1" end="11" decimals="" />
+		<col id="2" mapid="11" type="decimal" start="11" end="17" decimals="2" /> 
+		<col id="3" mapid="7" type="text" start="17" end="20" decimals="" /> 
+		<col id="4" mapid="6" type="date" start="20" end="30" decimals="" />
+		<col id="5" mapid="-5" type="integer" start="30" end="33" decimals="" />
+	</colums>
+</transform>

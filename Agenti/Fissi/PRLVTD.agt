@@ -1,0 +1,121 @@
+// ---------------------------------------------------------------------- //
+// Prelievo Totali Colli, Peso Lordo e Peso Netto da piedi doc. prelevati //
+// ---------------------------------------------------------------------- //
+// Cancellazione percentuali provvigioni in determinati documenti         //
+// ---------------------------------------------------------------------- //
+
+
+
+[VALUTA]
+
+// ---------------------------------------------- //
+// Prelievo Totali Colli, Peso Lordo e Peso Netto //
+// ---------------------------------------------- //
+
+// Recupero idtesta documento prelevato
+#LET V_IDTesta = {$(PARAMETRO:0)}
+
+// Recupero posizione campi necessari
+#RIFERIMENTORIGA #ssPiedeG;5;V_PosAspBeni
+#RIFERIMENTORIGA #ssPiedeG;17;V_PosAspBeniL
+#RIFERIMENTORIGA #ssPiedeG;7;V_PosColli
+#RIFERIMENTORIGA #ssPiedeG;8;V_PosPesN
+#RIFERIMENTORIGA #ssPiedeG;9;V_PosPesL
+
+#IF	{$(V_PosAspBeni)} > 0 & {$(V_PosAspBeniL)} > 0 & {$(V_PosColli)} > 0 & {$(V_PosPesN)} > 0 & {$(V_PosPesL)} > 0
+
+	// Apertura connessione database
+	#DBCONNETTI #0
+
+	// Lettura aspetto beni, colli e pesi da documento prelevato
+	#DBAPRITAB #0;#1;SELECT AspettoBeni, AspettoBeniInLingua, NumColli, TotPesoNetto, TotPesoLordo FROM TesteDocumenti WHERE Progressivo={$(V_IDTesta)}
+	#IF	{$(FINETABELLA)} = 1
+		#LET V_Colli = 0
+		#LET V_PesN = 0
+		#LET V_PesL = 0
+	#ELSE
+		#DBLEGGICAMPOSTR #1;AspettoBeni;V_AspBeni
+		#DBLEGGICAMPOSTR #1;AspettoBeniInLingua;V_AspBeniL
+		#DBLEGGICAMPO #1;NumColli;V_Colli
+		#DBLEGGICAMPO #1;TotPesoNetto;V_PesN
+		#DBLEGGICAMPO #1;TotPesoLordo;V_PesL
+	#ENDIF
+	#DBCHIUDITAB #1
+
+	// Chiusura connessione database
+	#DBDISCONNETTI #0
+
+	// Lettura aspetto beni, quantità colli e pesi documento attuale
+	#FRMLEGGICELLA #ssPiedeG;4;{$(V_PosAspBeni)};V_AspBeniDoc
+	#FRMLEGGICELLA #ssPiedeG;4;{$(V_PosAspBeniL)};V_AspBeniLDoc
+	#FRMLEGGICELLA #ssPiedeG;4;{$(V_PosColli)};V_TotColli
+	#FRMLEGGICELLA #ssPiedeG;4;{$(V_PosPesN)};V_TotPesN
+	#FRMLEGGICELLA #ssPiedeG;4;{$(V_PosPesL)};V_TotPesL
+
+	// Scrive l'aspetto beni se non già presente
+	#IF $(V_AspBeniDoc)== | $(V_AspBeniDoc)==0
+		#IF $(V_AspBeni)== | $(V_AspBeni)==0
+		#ELSE
+			#FRMSCRIVICELLA #ssPiedeG;4;{$(V_PosAspBeni)};$(V_AspBeni)
+		#ENDIF
+	#ENDIF
+
+	// Scrive l'aspetto beni in lingua se non già presente
+	#IF $(V_AspBeniLDoc)== | $(V_AspBeniLDoc)==0
+		#IF $(V_AspBeniL)== | $(V_AspBeniL)==0
+		#ELSE
+			#FRMSCRIVICELLA #ssPiedeG;4;{$(V_PosAspBeniL)};$(V_AspBeniL)
+		#ENDIF
+	#ENDIF
+
+	// Somma quantità lette
+	#LET V_TotColli = {$(V_TotColli) + $(V_Colli)}
+	#LET V_TotPesN = {$(V_TotPesN) + $(V_PesN)}
+	#LET V_TotPesL = {$(V_TotPesL) + $(V_PesL)}
+
+	// Scrittura nuovi valori
+	#FRMSCRIVICELLA #ssPiedeG;4;{$(V_PosColli)};{$(V_TotColli)}
+	#FRMSCRIVICELLA #ssPiedeG;4;{$(V_PosPesN)};{$(V_TotPesN)}
+	#FRMSCRIVICELLA #ssPiedeG;4;{$(V_PosPesL)};{$(V_TotPesL)}
+#ENDIF
+
+
+
+// ------------------------------------- //
+// Cancellazione percentuali provvigioni //
+// ------------------------------------- //
+
+// Recupero tipo documento
+#FRMLEGGICAMPOSTR #txtb_0;V_Doc
+
+// Recupero file configurazione
+#CERCAFILE ConfigPers.ini;$(PERCORSOMETODO)\Pers\$(DITTAATTIVA);V_File
+#IF $(V_File)==
+	#CERCAFILE ConfigPers.ini;$(PERCORSOMETODO)\Pers;V_File
+#ENDIF
+
+// Verifica se per il documento si devono azzerare le provvigioni
+#LEGGIFILEINI $(V_File);AZZERAPROVVDOC;TipiDoc;;V_ElencoDoc
+#TRIM V_ElencoDoc;V_ElencoDoc;T
+#LET V_Azzera=0
+#IF NOT($(V_ElencoDoc)==)
+	#LET V_Cont=0
+	#DO
+		#IF $(V_ElencoDoc:$(V_Cont))==$(V_Doc)
+			#LET V_Azzera=1
+		#ENDIF
+		#EXIT $(V_ElencoDoc:$(V_Cont))==$(V_Doc)
+
+		#LET V_Cont={$(V_Cont)+1}
+	#LOOP $(V_ElencoDoc:$(V_Cont))==
+#ENDIF
+
+// Azzera le provvigioni
+#IF {$(V_Azzera)}=1
+	#FRMSCRIVICAMPO #txtb_10;0
+	#FRMSCRIVICAMPO #txtb_54;0
+	#FRMSCRIVICAMPO #txtb_11;0
+	#FRMSCRIVICAMPO #txtb_55;0
+	#FRMSCRIVICAMPO #txtb_3;0
+	#FRMSCRIVICAMPO #txtb_56;0
+#ENDIF
